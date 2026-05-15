@@ -87,6 +87,8 @@ long-status fields, including the packed 7-segment timer from bytes 2-4, a foot 
 candidate from byte 7, and a heater candidate decoded from bit 1 of the last long-status
 byte.
 
+Known long/short status mappings are documented in [docs/decoding.md](docs/decoding.md).
+
 ## Formatting
 
 Format C/C++ code with `clang-format`. The shared rules live in `.clang-format`.

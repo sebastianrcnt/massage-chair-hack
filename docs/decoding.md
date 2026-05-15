@@ -1,12 +1,9 @@
 # Chair Status Decoding
 
-This document tracks the current reverse-engineered mapping for chair status frames.
-Anything marked as tentative is based on observed samples and may need correction as more
-captures are collected.
+This document tracks the current reverse-engineered status map. Byte positions are
+1-based. Bit ranges use `bit7..bit0`, where `bit7` is the most significant bit.
 
 ## Frame Sources
-
-The ESP32 bridge forwards two serial lines over BLE:
 
 | Prefix | Source | Meaning |
 | --- | --- | --- |
@@ -14,7 +11,9 @@ The ESP32 bridge forwards two serial lines over BLE:
 | `[W]` | Remote command line, white wire | Remote-to-chair command sniffing |
 | `[SENT]` | BLE monitor app | Command sent by this tool to the chair |
 
-The monitor currently classifies `[Y]` payloads by hex string length:
+## Frame Classification
+
+The monitor currently classifies `[Y]` payloads by hex string length.
 
 | Payload length | Monitor treatment |
 | --- | --- |
@@ -22,12 +21,58 @@ The monitor currently classifies `[Y]` payloads by hex string length:
 | `6..12` hex chars | Short status |
 | `> 12` hex chars | Long status |
 
-Commands are still entered as 4 hex chars. Status display can be toggled between binary,
-octal, and hex in the TUI.
+## Long Status Map
 
-## 7-Segment Table
+Known long-status samples are currently 9 bytes, but decoding code treats the heater as
+the last byte so it can tolerate length changes.
 
-The timer display uses the standard 7-segment byte mapping below.
+| Range | Name | Values / rule | Confidence |
+| --- | --- | --- | --- |
+| `B1[7:0]` | Unknown flags | Varies across samples | Unknown |
+| `B2[7:0]` | Timer tens 7-segment byte | Direct lookup in the 7-segment table | Confirmed |
+| `B3[7:4]` | Timer ones segment low nibble | Becomes `ones_segment[3:0]` | Confirmed |
+| `B3[3:0]` | Unknown flags | Varies across samples | Unknown |
+| `B4[7:4]` | Unknown flags | Varies across samples | Unknown |
+| `B4[3:0]` | Timer ones segment high nibble | Becomes `ones_segment[7:4]` | Confirmed |
+| `B5[7:0]` | Unknown flags | Varies across samples | Unknown |
+| `B6[7:0]` | Unknown flags | Usually observed as `06` in current samples | Unknown |
+| `B7[7:4]` | Foot roller | `on` when high nibble is `1`; otherwise `off` | Tentative |
+| `B7[3:0]` | Unknown flags | Not mapped | Unknown |
+| `B8[7:0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
+| `last[1]` | Heater | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |
+| `last[7:2], last[0]` | Unknown flags | Not mapped | Unknown |
+
+### Packed Timer Detail
+
+The timer display is packed as two 7-segment bytes.
+
+| Timer digit | Source |
+| --- | --- |
+| Tens | `B2[7:0]` |
+| Ones high nibble | `B4[3:0]` |
+| Ones low nibble | `B3[7:4]` |
+
+Formula:
+
+```text
+tens_segment = B2
+ones_segment = ((B4 & 0x0F) << 4) | ((B3 & 0xF0) >> 4)
+timer = seven_segment[tens_segment] + seven_segment[ones_segment]
+```
+
+Example:
+
+```text
+28: 23 5B F0 D7 0B 06 81 80 E0
+       ^^ ^^ ^^
+       B2 B3 B4
+
+tens_segment = 5B -> 2
+ones_segment = ((D7 & 0F) << 4) | ((F0 & F0) >> 4) = 7F -> 8
+timer = 28
+```
+
+### 7-Segment Table
 
 | Digit | Segment byte |
 | --- | --- |
@@ -42,36 +87,7 @@ The timer display uses the standard 7-segment byte mapping below.
 | `8` | `7F` |
 | `9` | `6F` |
 
-## Long Status
-
-Long status is decoded byte-by-byte. Byte positions below are 1-based.
-
-| Field | Bytes / bits | Decode rule | Status |
-| --- | --- | --- | --- |
-| Timer tens digit | Byte 2 | Direct 7-segment byte | Confirmed by samples |
-| Timer ones digit | Byte 3 high nibble + byte 4 low nibble | `ones_segment = ((B4 & 0x0F) << 4) \| ((B3 & 0xF0) >> 4)` | Confirmed by samples |
-| Foot roller | Byte 7 high nibble | `on` when the first hex digit of byte 7 is `1`; otherwise `off` | Tentative |
-| Heater | Last byte bit 1 | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |
-
-Timer example:
-
-```text
-28: 23 5B F0 D7 0B 06 81 80 E0
-       ^^ ^^ ^^
-       B2 B3 B4
-```
-
-`B2 = 5B` decodes to digit `2`.
-
-The ones digit is packed across `B3` and `B4`:
-
-```text
-((D7 & 0F) << 4) | ((F0 & F0) >> 4) = 7F
-```
-
-`7F` decodes to digit `8`, so the timer is `28` minutes.
-
-### Observed Timer Samples
+### Observed Long Timer Samples
 
 These samples are covered by `tests/test_chair_decode.py`.
 
@@ -90,22 +106,30 @@ These samples are covered by `tests/test_chair_decode.py`.
 | `27` | `27 5B 70 D0 0F 06 81 80 E0` |
 | `27` | `26 5B 70 D0 0B 06 81 80 E0` |
 
-## Short Status
+## Short Status Map
 
-Short status frames are displayed and diffed by the TUI, but their field-level mapping is
-not known yet. The monitor currently treats any `[Y]` payload of `6..12` hex chars as short
-status.
+Short status frames are displayed and diffed by the TUI, but no field-level short-status
+mapping is confirmed yet.
 
-Known examples from live debugging:
+Observed short frames are 3 bytes in the current notes.
 
-| Short status | Notes |
-| --- | --- |
-| `03 15 13` | Previously observed while timer showed `05`; exact field meaning unknown |
-| `03 15 06` | Previously observed while timer showed `04`; exact field meaning unknown |
-| `03 15 15` | Previously observed while timer showed `09`; exact field meaning unknown |
-| `00 06 15` | Previously observed while timer showed `10`; exact field meaning unknown |
+| Range | Name | Values / rule | Confidence |
+| --- | --- | --- | --- |
+| `B1[7:0]` | Unknown | Observed `03`, `00` | Unknown |
+| `B2[7:0]` | Unknown | Observed `15`, `06` | Unknown |
+| `B3[7:0]` | Unknown | Observed `13`, `06`, `15` | Unknown |
 
-These short-status timer guesses were superseded by the packed long-status timer mapping.
+### Observed Short Samples
+
+These were observed while the remote showed a timer value, but the timer mapping is now
+believed to belong to long status instead.
+
+| Remote timer | Short status sample | Notes |
+| --- | --- | --- |
+| `05` | `03 15 13` | Exact field meaning unknown |
+| `04` | `03 15 06` | Exact field meaning unknown |
+| `09` | `03 15 15` | Exact field meaning unknown |
+| `10` | `00 06 15` | Exact field meaning unknown |
 
 ## Unknowns
 

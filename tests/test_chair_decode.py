@@ -429,31 +429,34 @@ def test_unknown_bit_strings_pads_trailing_nibble_as_binary_byte() -> None:
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        ("0011223300", MassageAreaDecode(state="point", raw="00", source="B4[b2:b1]")),
-        ("0011223304", MassageAreaDecode(state="full", raw="10", source="B4[b2:b1]")),
-        ("0011223302", MassageAreaDecode(state="local", raw="01", source="B4[b2:b1]")),
-        ("0011223306", MassageAreaDecode(state="reserved", raw="11", source="B4[b2:b1]")),
+        ("0011223309", MassageAreaDecode(state="point", raw="09", source="B4")),
+        ("001122330D", MassageAreaDecode(state="full", raw="0D", source="B4")),
+        ("001122330B", MassageAreaDecode(state="local", raw="0B", source="B4")),
+        ("001122339", MassageAreaDecode(state="point", raw="09", source="B4")),
+        ("00112233D", MassageAreaDecode(state="full", raw="0D", source="B4")),
+        ("00112233B", MassageAreaDecode(state="local", raw="0B", source="B4")),
+        ("0011223306", MassageAreaDecode(state="reserved", raw="06", source="B4")),
         ("031513", MassageAreaDecode(state="unknown", raw="-", source="missing B4")),
         ("00112233", MassageAreaDecode(state="unknown", raw="-", source="missing B4")),
         ("00112233GG", MassageAreaDecode(state="unknown", raw="GG", source="invalid B4")),
     ],
 )
-def test_decode_massage_area_uses_short_b4_bits_2_to_1(
+def test_decode_massage_area_uses_short_b4_value(
     data: str, expected: MassageAreaDecode
 ) -> None:
     assert decode_massage_area(data) == expected
 
 
 def test_short_known_bit_masks_include_massage_area() -> None:
-    assert short_known_bit_masks("0011223304") == [0x00, 0x00, 0x00, 0x00, 0x06]
+    assert short_known_bit_masks("001122330D") == [0x00, 0x00, 0x00, 0x00, 0xFF]
 
 
 def test_short_unknown_bit_strings_masks_massage_area() -> None:
-    masks = short_known_bit_masks("0011223304")
-    assert unknown_bit_strings("0011223304", masks) == [
+    masks = short_known_bit_masks("001122330D")
+    assert unknown_bit_strings("001122330D", masks) == [
         "00000000",
         "00010001",
         "00100010",
         "00110011",
-        "00000..0",
+        "........",
     ]

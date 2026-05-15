@@ -169,7 +169,7 @@ def short_known_bit_masks(data: str) -> list[int]:
     masks = [0] * len(bytes_)
 
     if len(bytes_) > 4:
-        masks[4] |= 0x06  # Massage area.
+        masks[4] |= 0xFF  # Massage area.
 
     return masks
 
@@ -391,17 +391,17 @@ def decode_massage_area(data: str) -> MassageAreaDecode:
         return MassageAreaDecode(state="unknown", raw="-", source="missing B4")
 
     byte_4 = bytes_[4]
-    if not is_hex_code(byte_4, 2):
+    if not is_hex_chunk(byte_4):
         return MassageAreaDecode(state="unknown", raw=byte_4, source="invalid B4")
 
-    area_bits = (int(byte_4, 16) & 0x06) >> 1
+    area_value = int(byte_4, 16)
     area = {
-        0b00: "point",
-        0b10: "full",
-        0b01: "local",
-    }.get(area_bits, "reserved")
+        0x09: "point",
+        0x0D: "full",
+        0x0B: "local",
+    }.get(area_value, "reserved")
 
-    return MassageAreaDecode(state=area, raw=f"{area_bits:02b}", source="B4[b2:b1]")
+    return MassageAreaDecode(state=area, raw=f"{area_value:02X}", source="B4")
 
 
 def decode_width(data: str) -> WidthDecode:

@@ -33,9 +33,25 @@ class HeaterDecode:
 
 
 @dataclass(frozen=True)
+class FootRollerDecode:
+    state: HeaterState
+    raw: str
+
+
+@dataclass(frozen=True)
+class PackedTimerDecode:
+    minutes: str
+    tens_segment: str
+    ones_segment: str
+    raw: str
+
+
+@dataclass(frozen=True)
 class LongStatusDecode:
     last_bytes: str
     seven_segment_runs: list[SevenSegmentRun]
+    packed_timer: PackedTimerDecode | None
+    foot_roller: FootRollerDecode
     heater: HeaterDecode
 
 
@@ -99,15 +115,64 @@ def decode_seven_segment_runs(data: str) -> list[SevenSegmentRun]:
 
 
 def decode_heater(data: str) -> HeaterDecode:
-    if not data:
+    bytes_ = split_bytes(data)
+    if not bytes_:
         return HeaterDecode(state="unknown", raw="-")
 
-    value = data[-1]
-    if value == "0":
-        return HeaterDecode(state="off", raw=value)
-    if value == "2":
-        return HeaterDecode(state="on", raw=value)
-    return HeaterDecode(state="unknown", raw=value)
+    last_byte = bytes_[-1]
+    if not is_hex_code(last_byte, 2):
+        return HeaterDecode(state="unknown", raw=last_byte)
+
+    value = int(last_byte, 16)
+    state: HeaterState = "on" if value & 0x02 else "off"
+    return HeaterDecode(state=state, raw=f"{value:08b}")
+
+
+def decode_packed_timer(data: str) -> PackedTimerDecode | None:
+    bytes_ = split_bytes(data)
+    if len(bytes_) < 4:
+        return None
+
+    tens_segment = bytes_[1]
+    if not is_hex_code(tens_segment, 2):
+        return None
+
+    byte_2 = bytes_[2]
+    byte_3 = bytes_[3]
+    if not is_hex_code(byte_2, 2) or not is_hex_code(byte_3, 2):
+        return None
+
+    ones_segment_value = ((int(byte_3, 16) & 0x0F) << 4) | (
+        (int(byte_2, 16) & 0xF0) >> 4
+    )
+    ones_segment = f"{ones_segment_value:02X}"
+
+    tens = SEVEN_SEG_DIGITS.get(tens_segment)
+    ones = SEVEN_SEG_DIGITS.get(ones_segment)
+    if tens is None or ones is None:
+        return None
+
+    return PackedTimerDecode(
+        minutes=f"{tens}{ones}",
+        tens_segment=tens_segment,
+        ones_segment=ones_segment,
+        raw=" ".join(bytes_[1:4]),
+    )
+
+
+def decode_foot_roller(data: str) -> FootRollerDecode:
+    bytes_ = split_bytes(data)
+    if len(bytes_) < 7:
+        return FootRollerDecode(state="unknown", raw="-")
+
+    byte_7 = bytes_[6]
+    if not is_hex_code(byte_7, 2):
+        return FootRollerDecode(state="unknown", raw=byte_7)
+
+    high_nibble = byte_7[0]
+    if high_nibble == "1":
+        return FootRollerDecode(state="on", raw=high_nibble)
+    return FootRollerDecode(state="off", raw=high_nibble)
 
 
 def decode_long_status(data: str) -> LongStatusDecode:
@@ -116,5 +181,7 @@ def decode_long_status(data: str) -> LongStatusDecode:
     return LongStatusDecode(
         last_bytes=last_bytes,
         seven_segment_runs=decode_seven_segment_runs(data),
+        packed_timer=decode_packed_timer(data),
+        foot_roller=decode_foot_roller(data),
         heater=decode_heater(data),
     )

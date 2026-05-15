@@ -83,8 +83,9 @@ between binary, octal, and hex. Press `P` to pause or resume incoming display up
 Commands are still entered as 4-digit hex codes.
 
 The TUI shows `Chair Status` and `Decoded` side by side. The `Decoded` panel shows
-tentative long-status fields, including byte-aligned 7-segment timer candidates and a
-heater candidate decoded from the last long-status hex digit.
+long-status fields, including the packed 7-segment timer from bytes 2-4, a foot roller
+candidate from byte 7, and a heater candidate decoded from bit 1 of the last long-status
+byte.
 
 ## Formatting
 

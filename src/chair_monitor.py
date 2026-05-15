@@ -15,8 +15,9 @@ from datetime import datetime
 from time import monotonic
 
 from bleak import BleakClient, BleakScanner
+from textual import events
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Static, RichLog, Input, Label
 from textual.binding import Binding
 from rich.text import Text
@@ -144,36 +145,33 @@ class DecodedPanel(Static):
         content.append("Last bytes: ", style="bold cyan")
         content.append(format_byte_list(bytes_[-4:], self.display_mode), style="white")
 
-        runs = decoded.seven_segment_runs
-        content.append("\n")
-        if not runs:
-            content.append("7seg timer?: ", style="bold cyan")
+        packed_timer = decoded.packed_timer
+        content.append("\nTimer: ", style="bold cyan")
+        if packed_timer is None:
             content.append("no candidate", style="yellow")
         else:
-            run = runs[0]
-            content.append("7seg timer?: ", style="bold cyan")
-            content.append(f"{run.digits[-2:]} min", style="bold green")
-            content.append(f"  b{run.start_byte}-b{run.end_byte} ", style="dim")
+            content.append(f"{packed_timer.minutes} min", style="bold green")
+            content.append("  b2-b4 ", style="dim")
             content.append(
-                f"({format_byte_list(run.raw.split(), self.display_mode)})",
+                f"({format_byte_list(packed_timer.raw.split(), self.display_mode)})",
                 style="white",
             )
-
-            if len(runs) > 1:
-                content.append("\nOther 7seg: ", style="bold cyan")
-                content.append(
-                    "; ".join(
-                        (
-                            f"b{run.start_byte}-b{run.end_byte}:"
-                            f"{run.digits}("
-                            f"{format_byte_list(run.raw.split(), self.display_mode)})"
-                        )
-                        for run in runs[1:4]
-                    ),
-                    style="dim",
-                )
+            content.append(
+                f"  seg={packed_timer.tens_segment}/{packed_timer.ones_segment}",
+                style="dim",
+            )
 
         heater = decoded.heater
+        foot_roller = decoded.foot_roller
+        content.append("\nFoot roller?: ", style="bold cyan")
+        if foot_roller.state == "on":
+            content.append("on", style="bold green")
+        elif foot_roller.state == "off":
+            content.append("off", style="bold yellow")
+        else:
+            content.append("unknown", style="yellow")
+        content.append(f"  b7 high={foot_roller.raw}", style="dim")
+
         content.append("\nHeater?: ", style="bold cyan")
         if heater.state == "on":
             content.append("on", style="bold green")
@@ -181,9 +179,27 @@ class DecodedPanel(Static):
             content.append("off", style="bold yellow")
         else:
             content.append("unknown", style="yellow")
-        content.append(f"  last hex={heater.raw}", style="dim")
+        content.append(f"  last byte={heater.raw}", style="dim")
 
         self.update(content)
+
+
+class ResizeHandle(Static):
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        self.capture_mouse()
+        self.app.start_log_resize()
+        event.stop()
+
+    def on_mouse_move(self, event: events.MouseMove) -> None:
+        if self.app.is_resizing_logs and event.delta_y:
+            self.app.adjust_log_resize(event.delta_y)
+            event.stop()
+
+    def on_mouse_up(self, event: events.MouseUp) -> None:
+        if self.app.is_resizing_logs:
+            self.app.finish_log_resize()
+            self.release_mouse()
+            event.stop()
 
 
 class ChairMonitor(App):
@@ -192,7 +208,7 @@ class ChairMonitor(App):
         layout: vertical;
     }
     #status-row {
-        height: 7;
+        height: 12;
     }
     #status-box {
         height: 1fr;
@@ -210,6 +226,23 @@ class ChairMonitor(App):
         border: solid cyan;
         padding: 0 1;
     }
+    #resize-handle {
+        height: 1;
+        color: gray;
+        background: $surface;
+        text-align: center;
+    }
+    #log-row {
+        height: 1fr;
+    }
+    #cmd-panel {
+        height: 1fr;
+        width: 1fr;
+    }
+    #raw-panel {
+        height: 1fr;
+        width: 1fr;
+    }
     #display-mode {
         height: 1;
         padding: 0 1;
@@ -223,7 +256,7 @@ class ChairMonitor(App):
         text-style: bold;
     }
     #raw-log {
-        height: 8;
+        height: 1fr;
         border: solid gray;
     }
     #raw-title {
@@ -257,6 +290,8 @@ class ChairMonitor(App):
         self.display_mode = "bin"
         self.paused = False
         self.paused_count = 0
+        self.status_row_height = 12
+        self.is_resizing_logs = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -268,10 +303,14 @@ class ChairMonitor(App):
         with Horizontal(id="status-row"):
             yield StatusPanel("Chair Status\nWaiting for data...", id="status-box")
             yield DecodedPanel("Decoded\nWaiting for long status...", id="decoded-box")
-        yield Label(" Commands & Responses", id="cmd-title")
-        yield RichLog(highlight=True, markup=True, wrap=True, id="cmd-log")
-        yield Label(" Raw Feed", id="raw-title")
-        yield RichLog(highlight=True, markup=True, wrap=True, id="raw-log")
+        yield ResizeHandle(" drag to resize ", id="resize-handle")
+        with Horizontal(id="log-row"):
+            with Vertical(id="cmd-panel"):
+                yield Label(" Commands & Responses", id="cmd-title")
+                yield RichLog(highlight=True, markup=True, wrap=True, id="cmd-log")
+            with Vertical(id="raw-panel"):
+                yield Label(" Raw Feed", id="raw-title")
+                yield RichLog(highlight=True, markup=True, wrap=True, id="raw-log")
         yield Input(placeholder="Command: 4-digit hex (e.g. 0303) or PIN:XXXXXX - Enter to send")
         yield Footer()
 
@@ -295,6 +334,17 @@ class ChairMonitor(App):
     def refresh_status_format(self) -> None:
         self.query_one("#status-box", StatusPanel).set_format(self.display_mode)
         self.query_one("#decoded-box", DecodedPanel).set_format(self.display_mode)
+
+    def start_log_resize(self) -> None:
+        self.is_resizing_logs = True
+
+    def adjust_log_resize(self, delta_y: int) -> None:
+        status_row = self.query_one("#status-row", Horizontal)
+        self.status_row_height = max(7, min(24, self.status_row_height + delta_y))
+        status_row.styles.height = self.status_row_height
+
+    def finish_log_resize(self) -> None:
+        self.is_resizing_logs = False
 
     def action_toggle_display_mode(self) -> None:
         modes: list[DisplayMode] = ["bin", "oct", "hex"]

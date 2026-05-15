@@ -16,9 +16,21 @@ from time import monotonic
 
 from bleak import BleakClient, BleakScanner
 from textual.app import App, ComposeResult
+from textual.containers import Horizontal
 from textual.widgets import Header, Footer, Static, RichLog, Input, Label
 from textual.binding import Binding
 from rich.text import Text
+
+from chair_decode import (
+    DisplayMode,
+    decode_long_status,
+    format_byte,
+    format_byte_list,
+    format_bytes,
+    is_hex_chunk,
+    is_hex_code,
+    split_bytes,
+)
 
 # Must match ESP32 code
 SERVICE_UUID = "12345678-1234-1234-1234-123456789abc"
@@ -26,39 +38,27 @@ CHAR_DATA_UUID = "12345678-1234-1234-1234-123456789abd"  # Notify
 CHAR_CMD_UUID = "12345678-1234-1234-1234-123456789abe"   # Write
 
 
-def split_pairs(data: str) -> list[str]:
-    return [data[i:i+2] for i in range(0, len(data), 2)]
-
-
-def split_units(data: str, split_size: int) -> list[str]:
-    return [data[i:i+split_size] for i in range(0, len(data), split_size)]
-
-
-def is_hex_code(value: str, length: int) -> bool:
-    return len(value) == length and all(c in "0123456789ABCDEF" for c in value)
-
-
-def format_pair(pair: str, display_mode: str) -> str:
-    if display_mode == "dec" and is_hex_code(pair, len(pair)):
-        width = 3 if len(pair) == 2 else 2
-        return f"{int(pair, 16):0{width}d}"
-    return pair
-
-
-def format_pairs(data: str, display_mode: str, split_size: int) -> str:
-    return " ".join(format_pair(pair, display_mode) for pair in split_units(data, split_size))
-
-
-def highlight_diff(old: str, new: str, label: str, display_mode: str, split_size: int) -> Text:
-    old_pairs = split_units(old, split_size)
-    new_pairs = split_units(new, split_size)
+def highlight_diff(old: str, new: str, label: str, display_mode: DisplayMode) -> Text:
+    old_pairs = split_bytes(old)
+    new_pairs = split_bytes(new)
     result = Text()
     result.append(f"{label}: ", style="bold cyan")
     for i, pair in enumerate(new_pairs):
-        if i >= len(old_pairs) or pair != old_pairs[i]:
-            result.append(format_pair(pair, display_mode), style="bold red")
+        old_pair = old_pairs[i] if i < len(old_pairs) else ""
+        if display_mode == "bin" and is_hex_chunk(pair):
+            new_bits = format_byte(pair, "bin")
+            old_bits = format_byte(old_pair, "bin") if is_hex_chunk(old_pair) else ""
+            for bit_index, bit in enumerate(new_bits):
+                style = (
+                    "bold red"
+                    if bit_index >= len(old_bits) or bit != old_bits[bit_index]
+                    else "white"
+                )
+                result.append(bit, style=style)
+        elif pair != old_pair:
+            result.append(format_byte(pair, display_mode), style="bold red")
         else:
-            result.append(format_pair(pair, display_mode), style="white")
+            result.append(format_byte(pair, display_mode), style="white")
         if i < len(new_pairs) - 1:
             result.append(" ", style="white")
     return result
@@ -69,12 +69,10 @@ class StatusPanel(Static):
     prev_long: str = ""
     curr_short: str = ""
     curr_long: str = ""
-    display_mode: str = "hex"
-    split_size: int = 2
+    display_mode: DisplayMode = "bin"
 
-    def set_format(self, display_mode: str, split_size: int) -> None:
+    def set_format(self, display_mode: DisplayMode) -> None:
         self.display_mode = display_mode
-        self.split_size = split_size
         self._render_status()
 
     def update_short(self, data: str) -> bool:
@@ -95,6 +93,7 @@ class StatusPanel(Static):
 
     def _render_status(self):
         content = Text()
+        content.append("Chair Status\n", style="bold green")
         if self.curr_short:
             content.append_text(
                 highlight_diff(
@@ -102,7 +101,6 @@ class StatusPanel(Static):
                     self.curr_short,
                     "Short",
                     self.display_mode,
-                    self.split_size,
                 )
             )
         content.append("\n")
@@ -113,9 +111,78 @@ class StatusPanel(Static):
                     self.curr_long,
                     " Long",
                     self.display_mode,
-                    self.split_size,
                 )
             )
+        elif not self.curr_short:
+            content.append("Waiting for data...", style="dim")
+        self.update(content)
+
+
+class DecodedPanel(Static):
+    curr_long: str = ""
+    display_mode: DisplayMode = "bin"
+
+    def set_format(self, display_mode: DisplayMode) -> None:
+        self.display_mode = display_mode
+        self._render_decoded()
+
+    def update_long(self, data: str) -> None:
+        self.curr_long = data
+        self._render_decoded()
+
+    def _render_decoded(self) -> None:
+        content = Text()
+        if not self.curr_long:
+            content.append("Decoded\n", style="bold cyan")
+            content.append("Waiting for long status...", style="dim")
+            self.update(content)
+            return
+
+        content.append("Decoded\n", style="bold cyan")
+        decoded = decode_long_status(self.curr_long)
+        bytes_ = split_bytes(self.curr_long)
+        content.append("Last bytes: ", style="bold cyan")
+        content.append(format_byte_list(bytes_[-4:], self.display_mode), style="white")
+
+        runs = decoded.seven_segment_runs
+        content.append("\n")
+        if not runs:
+            content.append("7seg timer?: ", style="bold cyan")
+            content.append("no candidate", style="yellow")
+        else:
+            run = runs[0]
+            content.append("7seg timer?: ", style="bold cyan")
+            content.append(f"{run.digits[-2:]} min", style="bold green")
+            content.append(f"  b{run.start_byte}-b{run.end_byte} ", style="dim")
+            content.append(
+                f"({format_byte_list(run.raw.split(), self.display_mode)})",
+                style="white",
+            )
+
+            if len(runs) > 1:
+                content.append("\nOther 7seg: ", style="bold cyan")
+                content.append(
+                    "; ".join(
+                        (
+                            f"b{run.start_byte}-b{run.end_byte}:"
+                            f"{run.digits}("
+                            f"{format_byte_list(run.raw.split(), self.display_mode)})"
+                        )
+                        for run in runs[1:4]
+                    ),
+                    style="dim",
+                )
+
+        heater = decoded.heater
+        content.append("\nHeater?: ", style="bold cyan")
+        if heater.state == "on":
+            content.append("on", style="bold green")
+        elif heater.state == "off":
+            content.append("off", style="bold yellow")
+        else:
+            content.append("unknown", style="yellow")
+        content.append(f"  last hex={heater.raw}", style="dim")
+
         self.update(content)
 
 
@@ -124,17 +191,23 @@ class ChairMonitor(App):
     Screen {
         layout: vertical;
     }
+    #status-row {
+        height: 7;
+    }
     #status-box {
-        height: 5;
+        height: 1fr;
+        width: 1fr;
         border: solid green;
         padding: 0 1;
     }
-    #status-title {
-        color: green;
-        text-style: bold;
-    }
     #connection-status {
         height: 1;
+        padding: 0 1;
+    }
+    #decoded-box {
+        height: 1fr;
+        width: 1fr;
+        border: solid cyan;
         padding: 0 1;
     }
     #display-mode {
@@ -165,8 +238,8 @@ class ChairMonitor(App):
 
     TITLE = "Massage Chair Monitor"
     BINDINGS = [
-        Binding("f2", "toggle_display_mode", "Hex/Dec"),
-        Binding("f3", "toggle_split_size", "Byte/Nibble"),
+        Binding("p", "toggle_pause", "Pause"),
+        Binding("f2", "toggle_display_mode", "Display"),
         Binding("ctrl+q", "quit", "Quit"),
         Binding("ctrl+c", "quit", "Quit"),
     ]
@@ -181,15 +254,20 @@ class ChairMonitor(App):
         self.last_notify_at: float | None = None
         self.subscribed_at: float | None = None
         self.warned_no_notify = False
-        self.display_mode = "hex"
-        self.split_size = 2
+        self.display_mode = "bin"
+        self.paused = False
+        self.paused_count = 0
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Static("Display: HEX / BYTE (F2 mode, F3 split)", id="display-mode")
+        yield Static(
+            "Display: BIN / BYTE | LIVE (F2 mode, P pause)",
+            id="display-mode",
+        )
         yield Static("Disconnected", id="connection-status")
-        yield Label(" Chair Status (live)", id="status-title")
-        yield StatusPanel("Waiting for data...", id="status-box")
+        with Horizontal(id="status-row"):
+            yield StatusPanel("Chair Status\nWaiting for data...", id="status-box")
+            yield DecodedPanel("Decoded\nWaiting for long status...", id="decoded-box")
         yield Label(" Commands & Responses", id="cmd-title")
         yield RichLog(highlight=True, markup=True, wrap=True, id="cmd-log")
         yield Label(" Raw Feed", id="raw-title")
@@ -206,32 +284,44 @@ class ChairMonitor(App):
         status.update(Text(message, style=style))
 
     def set_display_mode_label(self) -> None:
-        mode = "HEX" if self.display_mode == "hex" else "DEC"
-        split = "BYTE" if self.split_size == 2 else "NIBBLE"
+        mode = self.display_mode.upper()
+        pause = f"PAUSED, skipped={self.paused_count}" if self.paused else "LIVE"
         label = self.query_one("#display-mode", Static)
-        label.update(Text(f"Display: {mode} / {split} (F2 mode, F3 split)", style="cyan"))
-
-    def refresh_status_format(self) -> None:
-        self.query_one("#status-box", StatusPanel).set_format(
-            self.display_mode,
-            self.split_size,
+        style = "bold yellow" if self.paused else "cyan"
+        label.update(
+            Text(f"Display: {mode} / BYTE | {pause} (F2 mode, P pause)", style=style)
         )
 
+    def refresh_status_format(self) -> None:
+        self.query_one("#status-box", StatusPanel).set_format(self.display_mode)
+        self.query_one("#decoded-box", DecodedPanel).set_format(self.display_mode)
+
     def action_toggle_display_mode(self) -> None:
-        self.display_mode = "dec" if self.display_mode == "hex" else "hex"
+        modes: list[DisplayMode] = ["bin", "oct", "hex"]
+        self.display_mode = modes[(modes.index(self.display_mode) + 1) % len(modes)]
         self.set_display_mode_label()
         self.refresh_status_format()
         raw_log = self.query_one("#raw-log", RichLog)
-        mode = "decimal" if self.display_mode == "dec" else "hex"
+        mode = {
+            "bin": "binary",
+            "oct": "octal",
+            "hex": "hex",
+        }[self.display_mode]
         raw_log.write(Text(f"Display mode changed to {mode}", style="cyan"))
 
-    def action_toggle_split_size(self) -> None:
-        self.split_size = 1 if self.split_size == 2 else 2
+    def action_toggle_pause(self) -> None:
+        self.paused = not self.paused
+        if self.paused:
+            self.paused_count = 0
         self.set_display_mode_label()
-        self.refresh_status_format()
         raw_log = self.query_one("#raw-log", RichLog)
-        split = "nibble" if self.split_size == 1 else "byte"
-        raw_log.write(Text(f"Split size changed to {split}", style="cyan"))
+        message = (
+            "Paused incoming display updates"
+            if self.paused
+            else "Resumed incoming display updates"
+        )
+        style = "bold yellow" if self.paused else "bold green"
+        raw_log.write(Text(message, style=style))
 
     def debug_log(self, message: str) -> None:
         if not self.debug_enabled:
@@ -241,6 +331,11 @@ class ChairMonitor(App):
         raw_log.write(Text(f"{now}  [debug] {message}", style="blue"))
 
     def process_line(self, text: str) -> None:
+        if self.paused:
+            self.paused_count += 1
+            self.set_display_mode_label()
+            return
+
         raw_log = self.query_one("#raw-log", RichLog)
         cmd_log = self.query_one("#cmd-log", RichLog)
         status = self.query_one("#status-box", StatusPanel)
@@ -262,7 +357,7 @@ class ChairMonitor(App):
                 entry.append("← ", style="yellow")
                 entry.append("[Y] ", style="bold yellow")
                 entry.append(
-                    format_pairs(data, self.display_mode, self.split_size),
+                    format_bytes(data, self.display_mode),
                     style="bold white",
                 )
                 cmd_log.write(entry)
@@ -272,6 +367,7 @@ class ChairMonitor(App):
 
             else:
                 status.update_long(data)
+                self.query_one("#decoded-box", DecodedPanel).update_long(data)
 
         elif text.startswith("[W] "):
             data = text[4:]
@@ -280,7 +376,7 @@ class ChairMonitor(App):
             entry.append("→ ", style="green")
             entry.append("[W] ", style="bold green")
             entry.append(
-                format_pairs(data, self.display_mode, self.split_size),
+                format_bytes(data, self.display_mode),
                 style="bold white",
             )
             cmd_log.write(entry)
@@ -292,7 +388,7 @@ class ChairMonitor(App):
             entry.append("⚡ ", style="magenta")
             entry.append("[SENT] ", style="bold magenta")
             entry.append(
-                format_pairs(data, self.display_mode, self.split_size),
+                format_bytes(data, self.display_mode),
                 style="bold white",
             )
             cmd_log.write(entry)

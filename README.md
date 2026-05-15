@@ -75,11 +75,16 @@ make compiledb             # generate compile_commands.json for clangd
 make monitor-app           # run BLE TUI
 make monitor-app-debug     # run BLE TUI with diagnostics
 make check-python          # syntax-check Python monitor
+make test                  # run Python unit tests
 ```
 
-In the BLE TUI, press `F2` to toggle byte display between hex and decimal. Press `F3`
-to toggle splitting between byte-sized `AA BB` and nibble-sized `A A B B` groups.
+The BLE TUI displays status bytes as binary by default. Press `F2` to cycle byte display
+between binary, octal, and hex. Press `P` to pause or resume incoming display updates.
 Commands are still entered as 4-digit hex codes.
+
+The TUI shows `Chair Status` and `Decoded` side by side. The `Decoded` panel shows
+tentative long-status fields, including byte-aligned 7-segment timer candidates and a
+heater candidate decoded from the last long-status hex digit.
 
 ## Formatting
 

@@ -1,4 +1,4 @@
-.PHONY: build upload monitor devices clean compiledb monitor-app monitor-app-debug check-python
+.PHONY: build upload monitor devices clean compiledb monitor-app monitor-app-debug check-python test
 
 build:
 	uv run pio run
@@ -25,4 +25,7 @@ monitor-app-debug:
 	uv run src/chair_monitor.py --debug
 
 check-python:
-	uv run python -m py_compile src/chair_monitor.py
+	uv run python -m py_compile src/chair_decode.py src/chair_monitor.py
+
+test:
+	uv run pytest

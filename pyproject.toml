@@ -10,3 +10,11 @@ dependencies = [
     "pyserial>=3.5",
     "textual>=8.2.6",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

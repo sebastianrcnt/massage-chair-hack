@@ -109,12 +109,16 @@ class MyCmdCallback : public BLECharacteristicCallbacks {
 
         Serial.printf("BLE received: %s\n", val.c_str());
 
-        // PIN change command: "PIN:XXXX"
-        if (val.startsWith("PIN:") && val.length() >= 8) {
+        // PIN change command: "PIN:XXXXXX"
+        if (val.startsWith("PIN:") && val.length() >= 10) {
             String newPin = val.substring(4);
             newPin.trim();
             uint32_t pin = newPin.toInt();
-            if (newPin.length() == 4 && pin <= 9999) {
+            bool validPin = newPin.length() == 6 && pin <= 999999;
+            for (size_t i = 0; validPin && i < newPin.length(); i++) {
+                validPin = isDigit(newPin[i]);
+            }
+            if (validPin) {
                 blePin = pin;
                 prefs.begin("chair", false);
                 prefs.putUInt("pin", blePin);
@@ -128,7 +132,7 @@ class MyCmdCallback : public BLECharacteristicCallbacks {
                 esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &blePin,
                                                sizeof(uint32_t));
             } else {
-                bleSend("[PIN] Invalid. Use PIN:XXXX (0000-9999)");
+                bleSend("[PIN] Invalid. Use PIN:XXXXXX (000000-999999)");
             }
             return;
         }
@@ -192,9 +196,9 @@ void setup()
 
     // Load PIN from NVS.
     prefs.begin("chair", true);       // read-only
-    blePin = prefs.getUInt("pin", 0); // default 0000
+    blePin = prefs.getUInt("pin", 0); // default 000000
     prefs.end();
-    Serial.printf("Loaded PIN: %04d\n", blePin);
+    Serial.printf("Loaded PIN: %06d\n", blePin);
 
     // Init BLE.
     BLEDevice::init("ChairSniffer");

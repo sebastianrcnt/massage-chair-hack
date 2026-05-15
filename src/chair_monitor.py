@@ -5,11 +5,12 @@ Usage:
     pip install textual bleak
     python chair_monitor.py [--name ChairSniffer]
 
-On first run, your OS will prompt for the BLE passkey (default: 0000).
+On first run, your OS will prompt for the BLE passkey (default: 000000).
 """
 
 import asyncio
 import argparse
+import threading
 from datetime import datetime
 
 from bleak import BleakClient, BleakScanner
@@ -121,10 +122,13 @@ class ChairMonitor(App):
         Binding("ctrl+c", "quit", "Quit"),
     ]
 
-    def __init__(self, device_name: str, **kwargs):
+    def __init__(self, device_name: str, debug_enabled: bool = False, **kwargs):
         super().__init__(**kwargs)
         self.device_name = device_name
+        self.debug_enabled = debug_enabled
         self.ble_client: BleakClient | None = None
+        self.ui_thread_id = threading.get_ident()
+        self.notify_count = 0
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -134,11 +138,19 @@ class ChairMonitor(App):
         yield RichLog(highlight=True, markup=True, wrap=True, id="cmd-log")
         yield Label(" Raw Feed", id="raw-title")
         yield RichLog(highlight=True, markup=True, wrap=True, id="raw-log")
-        yield Input(placeholder="Command: 4-digit hex (e.g. 0303) or PIN:XXXX — Enter to send")
+        yield Input(placeholder="Command: 4-digit hex (e.g. 0303) or PIN:XXXXXX - Enter to send")
         yield Footer()
 
     async def on_mount(self) -> None:
+        self.ui_thread_id = threading.get_ident()
         self.run_worker(self.ble_connect(), exclusive=True)
+
+    def debug_log(self, message: str) -> None:
+        if not self.debug_enabled:
+            return
+        raw_log = self.query_one("#raw-log", RichLog)
+        now = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        raw_log.write(Text(f"{now}  [debug] {message}", style="blue"))
 
     def process_line(self, text: str) -> None:
         raw_log = self.query_one("#raw-log", RichLog)
@@ -197,9 +209,16 @@ class ChairMonitor(App):
 
     def notification_handler(self, sender, data: bytearray) -> None:
         """Called by bleak when ESP32 sends a notification."""
+        self.notify_count += 1
         text = data.decode("utf-8", errors="replace").strip()
         if text:
-            self.call_from_thread(self.process_line, text)
+            try:
+                if threading.get_ident() == self.ui_thread_id:
+                    self.process_line(text)
+                else:
+                    self.call_from_thread(self.process_line, text)
+            except Exception as e:
+                print(f"notification handler failed: {e!r}; text={text!r}")
 
     async def ble_connect(self) -> None:
         raw_log = self.query_one("#raw-log", RichLog)
@@ -232,13 +251,34 @@ class ChairMonitor(App):
 
                 raw_log.write(Text("Connected!", style="bold green"))
 
+                if self.debug_enabled:
+                    services = self.ble_client.services
+                    for service in services:
+                        raw_log.write(Text(f"[debug] service {service.uuid}", style="blue"))
+                        for char in service.characteristics:
+                            raw_log.write(
+                                Text(
+                                    f"[debug] char {char.uuid} props={','.join(char.properties)}",
+                                    style="blue",
+                                )
+                            )
+
                 # Subscribe to notifications
+                raw_log.write(Text(f"Subscribing to {CHAR_DATA_UUID}...", style="cyan"))
                 await self.ble_client.start_notify(
                     CHAR_DATA_UUID, self.notification_handler
                 )
+                raw_log.write(Text("Subscribed to chair data notifications", style="bold green"))
+
+                try:
+                    value = await self.ble_client.read_gatt_char(CHAR_DATA_UUID)
+                    raw_log.write(Text(f"[debug] initial read: {value!r}", style="blue"))
+                except Exception as e:
+                    raw_log.write(Text(f"[debug] initial read failed: {e}", style="blue"))
 
                 # Stay alive while connected
                 while self.ble_client.is_connected:
+                    self.debug_log(f"connected; notifications received={self.notify_count}")
                     await asyncio.sleep(1)
 
                 raw_log.write(Text("Disconnected", style="yellow"))
@@ -260,13 +300,13 @@ class ChairMonitor(App):
             return
 
         # Validate
-        is_pin_cmd = cmd.startswith("PIN:") and len(cmd) == 8
+        is_pin_cmd = cmd.startswith("PIN:") and len(cmd) == 10 and cmd[4:].isdigit()
         is_chair_cmd = len(cmd) == 4 and not cmd.startswith("PIN")
 
         if not is_pin_cmd and not is_chair_cmd:
             cmd_log.write(
                 Text(
-                    f"Invalid: '{cmd}'. Use 4-digit hex or PIN:XXXX",
+                    f"Invalid: '{cmd}'. Use 4-digit hex or PIN:XXXXXX",
                     style="bold red",
                 )
             )
@@ -300,9 +340,10 @@ def main():
     parser.add_argument(
         "--name", default="ChairSniffer", help="BLE device name to scan for"
     )
+    parser.add_argument("--debug", action="store_true", help="show BLE diagnostic logs")
     args = parser.parse_args()
 
-    app = ChairMonitor(device_name=args.name)
+    app = ChairMonitor(device_name=args.name, debug_enabled=args.debug)
     app.run()
 
 

@@ -23,9 +23,15 @@ Compile the firmware:
 uv run pio run
 ```
 
-## Upload
+## Deploy
 
-Connect the ESP32 over USB and upload:
+Connect the ESP32 over USB, then list available serial devices:
+
+```sh
+uv run pio device list
+```
+
+Upload the firmware:
 
 ```sh
 uv run pio run --target upload
@@ -37,21 +43,24 @@ If PlatformIO does not auto-detect the port, pass it explicitly:
 uv run pio run --target upload --upload-port /dev/cu.usbserial-0001
 ```
 
-## Monitor
-
-Open the serial monitor:
+After upload, open the serial monitor:
 
 ```sh
-uv run pio device monitor
+uv run pio device monitor --baud 115200
 ```
 
-Use a specific port:
+Expected boot logs include:
 
-```sh
-uv run pio device monitor --port /dev/cu.usbserial-0001
+```text
+Loaded PIN: 000000
+BLE ready: ChairSniffer
 ```
 
-The firmware logs at `115200` baud.
+The device advertises over BLE as `ChairSniffer`.
+
+On first BLE pairing, enter the 6-digit passkey shown by the firmware. The default is
+`000000`. After connecting with `src/chair_monitor.py`, change it with a command such as
+`PIN:123456`.
 
 ## Common Commands
 

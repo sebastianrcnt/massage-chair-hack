@@ -162,7 +162,17 @@ class DecodedPanel(Static):
             )
 
         heater = decoded.heater
+        massage_speed = decoded.massage_speed
         foot_roller = decoded.foot_roller
+        content.append("\nSpeed?: ", style="bold cyan")
+        if massage_speed.state == "unknown":
+            content.append("unknown", style="yellow")
+        elif massage_speed.state == "reserved":
+            content.append("reserved", style="yellow")
+        else:
+            content.append(f"{massage_speed.state}", style="bold green")
+        content.append(f"  b6[5:4]={massage_speed.raw}", style="dim")
+
         content.append("\nFoot roller?: ", style="bold cyan")
         if foot_roller.state == "on":
             content.append("on", style="bold green")

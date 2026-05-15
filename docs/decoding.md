@@ -35,7 +35,9 @@ the last byte so it can tolerate length changes.
 | `B4[7:4]` | Unknown flags | Varies across samples | Unknown |
 | `B4[3:0]` | Timer ones segment high nibble | Becomes `ones_segment[7:4]` | Confirmed |
 | `B5[7:0]` | Unknown flags | Varies across samples | Unknown |
-| `B6[7:0]` | Unknown flags | Usually observed as `06` in current samples | Unknown |
+| `B6[7:6]` | Unknown flags | Not mapped | Unknown |
+| `B6[5:4]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
+| `B6[3:0]` | Unknown flags | Usually observed as `6` in current samples | Unknown |
 | `B7[7:4]` | Foot roller | `on` when high nibble is `1`; otherwise `off` | Tentative |
 | `B7[3:0]` | Unknown flags | Not mapped | Unknown |
 | `B8[7:0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
@@ -135,6 +137,6 @@ believed to belong to long status instead.
 
 - Most long-status bytes and bit flags are still unmapped.
 - Short status has no confirmed field-level mapping yet.
-- Foot roller and heater rules should be validated against more captures.
+- Massage speed, foot roller, and heater rules should be validated against more captures.
 - Some bits in the timer sample bytes vary while the displayed timer stays the same; those
   bits are likely unrelated flags, but their meanings are unknown.

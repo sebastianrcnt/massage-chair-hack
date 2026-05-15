@@ -3,6 +3,7 @@ from typing import Literal
 
 DisplayMode = Literal["bin", "oct", "hex"]
 HeaterState = Literal["on", "off", "unknown"]
+MassageSpeedState = Literal["1", "3", "5", "reserved", "unknown"]
 
 SEVEN_SEG_DIGITS = {
     "3F": "0",
@@ -39,6 +40,12 @@ class FootRollerDecode:
 
 
 @dataclass(frozen=True)
+class MassageSpeedDecode:
+    state: MassageSpeedState
+    raw: str
+
+
+@dataclass(frozen=True)
 class PackedTimerDecode:
     minutes: str
     tens_segment: str
@@ -51,6 +58,7 @@ class LongStatusDecode:
     last_bytes: str
     seven_segment_runs: list[SevenSegmentRun]
     packed_timer: PackedTimerDecode | None
+    massage_speed: MassageSpeedDecode
     foot_roller: FootRollerDecode
     heater: HeaterDecode
 
@@ -175,6 +183,25 @@ def decode_foot_roller(data: str) -> FootRollerDecode:
     return FootRollerDecode(state="off", raw=high_nibble)
 
 
+def decode_massage_speed(data: str) -> MassageSpeedDecode:
+    bytes_ = split_bytes(data)
+    if len(bytes_) < 6:
+        return MassageSpeedDecode(state="unknown", raw="-")
+
+    byte_6 = bytes_[5]
+    if not is_hex_code(byte_6, 2):
+        return MassageSpeedDecode(state="unknown", raw=byte_6)
+
+    speed_bits = (int(byte_6, 16) & 0x30) >> 4
+    speed = {
+        0b00: "1",
+        0b01: "3",
+        0b11: "5",
+    }.get(speed_bits, "reserved")
+
+    return MassageSpeedDecode(state=speed, raw=f"{speed_bits:02b}")
+
+
 def decode_long_status(data: str) -> LongStatusDecode:
     bytes_ = split_bytes(data)
     last_bytes = " ".join(bytes_[-4:]) if bytes_ else "-"
@@ -182,6 +209,7 @@ def decode_long_status(data: str) -> LongStatusDecode:
         last_bytes=last_bytes,
         seven_segment_runs=decode_seven_segment_runs(data),
         packed_timer=decode_packed_timer(data),
+        massage_speed=decode_massage_speed(data),
         foot_roller=decode_foot_roller(data),
         heater=decode_heater(data),
     )

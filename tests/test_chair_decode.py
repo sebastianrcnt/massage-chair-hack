@@ -3,11 +3,13 @@ import pytest
 from chair_decode import (
     FootRollerDecode,
     HeaterDecode,
+    MassageSpeedDecode,
     PackedTimerDecode,
     SevenSegmentRun,
     decode_foot_roller,
     decode_heater,
     decode_long_status,
+    decode_massage_speed,
     decode_packed_timer,
     decode_seven_segment_runs,
     format_byte,
@@ -103,6 +105,7 @@ def test_decode_long_status_combines_known_fields() -> None:
     assert decoded.seven_segment_runs == [
         SevenSegmentRun(start_byte=2, end_byte=3, digits="05", raw="3F 6D")
     ]
+    assert decoded.massage_speed == MassageSpeedDecode(state="unknown", raw="-")
     assert decoded.foot_roller == FootRollerDecode(state="unknown", raw="-")
     assert decoded.heater == HeaterDecode(state="on", raw="00000010")
 
@@ -154,3 +157,20 @@ def test_decode_foot_roller_uses_seventh_byte_high_nibble(
     data: str, expected: FootRollerDecode
 ) -> None:
     assert decode_foot_roller(data) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ("235BF0D70B001180E0", MassageSpeedDecode(state="1", raw="00")),
+        ("235BF0D70B101180E0", MassageSpeedDecode(state="3", raw="01")),
+        ("235BF0D70B301180E0", MassageSpeedDecode(state="5", raw="11")),
+        ("235BF0D70B201180E0", MassageSpeedDecode(state="reserved", raw="10")),
+        ("235BF0D70B", MassageSpeedDecode(state="unknown", raw="-")),
+        ("235BF0D70BG01180E0", MassageSpeedDecode(state="unknown", raw="G0")),
+    ],
+)
+def test_decode_massage_speed_uses_sixth_byte_bits_5_to_4(
+    data: str, expected: MassageSpeedDecode
+) -> None:
+    assert decode_massage_speed(data) == expected

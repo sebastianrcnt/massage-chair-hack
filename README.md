@@ -77,6 +77,10 @@ make monitor-app-debug     # run BLE TUI with diagnostics
 make check-python          # syntax-check Python monitor
 ```
 
+In the BLE TUI, press `F2` to toggle byte display between hex and decimal. Press `F3`
+to toggle splitting between byte-sized `AA BB` and nibble-sized `A A B B` groups.
+Commands are still entered as 4-digit hex codes.
+
 ## Formatting
 
 Format C/C++ code with `clang-format`. The shared rules live in `.clang-format`.

@@ -30,20 +30,35 @@ def split_pairs(data: str) -> list[str]:
     return [data[i:i+2] for i in range(0, len(data), 2)]
 
 
+def split_units(data: str, split_size: int) -> list[str]:
+    return [data[i:i+split_size] for i in range(0, len(data), split_size)]
+
+
 def is_hex_code(value: str, length: int) -> bool:
     return len(value) == length and all(c in "0123456789ABCDEF" for c in value)
 
 
-def highlight_diff(old: str, new: str, label: str) -> Text:
-    old_pairs = split_pairs(old)
-    new_pairs = split_pairs(new)
+def format_pair(pair: str, display_mode: str) -> str:
+    if display_mode == "dec" and is_hex_code(pair, len(pair)):
+        width = 3 if len(pair) == 2 else 2
+        return f"{int(pair, 16):0{width}d}"
+    return pair
+
+
+def format_pairs(data: str, display_mode: str, split_size: int) -> str:
+    return " ".join(format_pair(pair, display_mode) for pair in split_units(data, split_size))
+
+
+def highlight_diff(old: str, new: str, label: str, display_mode: str, split_size: int) -> Text:
+    old_pairs = split_units(old, split_size)
+    new_pairs = split_units(new, split_size)
     result = Text()
     result.append(f"{label}: ", style="bold cyan")
     for i, pair in enumerate(new_pairs):
         if i >= len(old_pairs) or pair != old_pairs[i]:
-            result.append(pair, style="bold red")
+            result.append(format_pair(pair, display_mode), style="bold red")
         else:
-            result.append(pair, style="white")
+            result.append(format_pair(pair, display_mode), style="white")
         if i < len(new_pairs) - 1:
             result.append(" ", style="white")
     return result
@@ -54,6 +69,13 @@ class StatusPanel(Static):
     prev_long: str = ""
     curr_short: str = ""
     curr_long: str = ""
+    display_mode: str = "hex"
+    split_size: int = 2
+
+    def set_format(self, display_mode: str, split_size: int) -> None:
+        self.display_mode = display_mode
+        self.split_size = split_size
+        self._render_status()
 
     def update_short(self, data: str) -> bool:
         if data == self.curr_short:
@@ -75,12 +97,24 @@ class StatusPanel(Static):
         content = Text()
         if self.curr_short:
             content.append_text(
-                highlight_diff(self.prev_short, self.curr_short, "Short")
+                highlight_diff(
+                    self.prev_short,
+                    self.curr_short,
+                    "Short",
+                    self.display_mode,
+                    self.split_size,
+                )
             )
         content.append("\n")
         if self.curr_long:
             content.append_text(
-                highlight_diff(self.prev_long, self.curr_long, " Long")
+                highlight_diff(
+                    self.prev_long,
+                    self.curr_long,
+                    " Long",
+                    self.display_mode,
+                    self.split_size,
+                )
             )
         self.update(content)
 
@@ -100,6 +134,10 @@ class ChairMonitor(App):
         text-style: bold;
     }
     #connection-status {
+        height: 1;
+        padding: 0 1;
+    }
+    #display-mode {
         height: 1;
         padding: 0 1;
     }
@@ -127,6 +165,8 @@ class ChairMonitor(App):
 
     TITLE = "Massage Chair Monitor"
     BINDINGS = [
+        Binding("f2", "toggle_display_mode", "Hex/Dec"),
+        Binding("f3", "toggle_split_size", "Byte/Nibble"),
         Binding("ctrl+q", "quit", "Quit"),
         Binding("ctrl+c", "quit", "Quit"),
     ]
@@ -141,9 +181,12 @@ class ChairMonitor(App):
         self.last_notify_at: float | None = None
         self.subscribed_at: float | None = None
         self.warned_no_notify = False
+        self.display_mode = "hex"
+        self.split_size = 2
 
     def compose(self) -> ComposeResult:
         yield Header()
+        yield Static("Display: HEX / BYTE (F2 mode, F3 split)", id="display-mode")
         yield Static("Disconnected", id="connection-status")
         yield Label(" Chair Status (live)", id="status-title")
         yield StatusPanel("Waiting for data...", id="status-box")
@@ -161,6 +204,34 @@ class ChairMonitor(App):
     def set_connection_status(self, message: str, style: str = "white") -> None:
         status = self.query_one("#connection-status", Static)
         status.update(Text(message, style=style))
+
+    def set_display_mode_label(self) -> None:
+        mode = "HEX" if self.display_mode == "hex" else "DEC"
+        split = "BYTE" if self.split_size == 2 else "NIBBLE"
+        label = self.query_one("#display-mode", Static)
+        label.update(Text(f"Display: {mode} / {split} (F2 mode, F3 split)", style="cyan"))
+
+    def refresh_status_format(self) -> None:
+        self.query_one("#status-box", StatusPanel).set_format(
+            self.display_mode,
+            self.split_size,
+        )
+
+    def action_toggle_display_mode(self) -> None:
+        self.display_mode = "dec" if self.display_mode == "hex" else "hex"
+        self.set_display_mode_label()
+        self.refresh_status_format()
+        raw_log = self.query_one("#raw-log", RichLog)
+        mode = "decimal" if self.display_mode == "dec" else "hex"
+        raw_log.write(Text(f"Display mode changed to {mode}", style="cyan"))
+
+    def action_toggle_split_size(self) -> None:
+        self.split_size = 1 if self.split_size == 2 else 2
+        self.set_display_mode_label()
+        self.refresh_status_format()
+        raw_log = self.query_one("#raw-log", RichLog)
+        split = "nibble" if self.split_size == 1 else "byte"
+        raw_log.write(Text(f"Split size changed to {split}", style="cyan"))
 
     def debug_log(self, message: str) -> None:
         if not self.debug_enabled:
@@ -190,7 +261,10 @@ class ChairMonitor(App):
                 entry.append(f"{now}  ", style="dim")
                 entry.append("← ", style="yellow")
                 entry.append("[Y] ", style="bold yellow")
-                entry.append(" ".join(split_pairs(data)), style="bold white")
+                entry.append(
+                    format_pairs(data, self.display_mode, self.split_size),
+                    style="bold white",
+                )
                 cmd_log.write(entry)
 
             elif data_len <= 12:
@@ -205,7 +279,10 @@ class ChairMonitor(App):
             entry.append(f"{now}  ", style="dim")
             entry.append("→ ", style="green")
             entry.append("[W] ", style="bold green")
-            entry.append(" ".join(split_pairs(data)), style="bold white")
+            entry.append(
+                format_pairs(data, self.display_mode, self.split_size),
+                style="bold white",
+            )
             cmd_log.write(entry)
 
         elif text.startswith("[SENT] "):
@@ -214,7 +291,10 @@ class ChairMonitor(App):
             entry.append(f"{now}  ", style="dim")
             entry.append("⚡ ", style="magenta")
             entry.append("[SENT] ", style="bold magenta")
-            entry.append(" ".join(split_pairs(data)), style="bold white")
+            entry.append(
+                format_pairs(data, self.display_mode, self.split_size),
+                style="bold white",
+            )
             cmd_log.write(entry)
 
         elif text.startswith("[PIN] ") or text.startswith("[ERR] "):

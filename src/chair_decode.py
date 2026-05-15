@@ -67,6 +67,7 @@ class AirDecode:
 class MassageAreaDecode:
     state: MassageAreaState
     raw: str
+    source: str
 
 
 @dataclass(frozen=True)
@@ -387,11 +388,11 @@ def decode_air(data: str) -> AirDecode:
 def decode_massage_area(data: str) -> MassageAreaDecode:
     bytes_ = split_bytes(data)
     if len(bytes_) < 5:
-        return MassageAreaDecode(state="unknown", raw="-")
+        return MassageAreaDecode(state="unknown", raw="-", source="missing B4")
 
     byte_4 = bytes_[4]
     if not is_hex_code(byte_4, 2):
-        return MassageAreaDecode(state="unknown", raw=byte_4)
+        return MassageAreaDecode(state="unknown", raw=byte_4, source="invalid B4")
 
     area_bits = (int(byte_4, 16) & 0x06) >> 1
     area = {
@@ -400,7 +401,7 @@ def decode_massage_area(data: str) -> MassageAreaDecode:
         0b01: "local",
     }.get(area_bits, "reserved")
 
-    return MassageAreaDecode(state=area, raw=f"{area_bits:02b}")
+    return MassageAreaDecode(state=area, raw=f"{area_bits:02b}", source="B4[b2:b1]")
 
 
 def decode_width(data: str) -> WidthDecode:

@@ -225,7 +225,7 @@ class DecodedPanel(Static):
                 content.append("reserved", style="yellow")
             else:
                 content.append(area.state, style="bold green")
-            content.append(f"  B4[b2:b1]={area.raw}", style="dim")
+            content.append(f"  {area.source}={area.raw}", style="dim")
 
         if not self.curr_long:
             self.update(content)

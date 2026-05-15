@@ -429,12 +429,13 @@ def test_unknown_bit_strings_pads_trailing_nibble_as_binary_byte() -> None:
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        ("0011223300", MassageAreaDecode(state="point", raw="00")),
-        ("0011223304", MassageAreaDecode(state="full", raw="10")),
-        ("0011223302", MassageAreaDecode(state="local", raw="01")),
-        ("0011223306", MassageAreaDecode(state="reserved", raw="11")),
-        ("00112233", MassageAreaDecode(state="unknown", raw="-")),
-        ("00112233GG", MassageAreaDecode(state="unknown", raw="GG")),
+        ("0011223300", MassageAreaDecode(state="point", raw="00", source="B4[b2:b1]")),
+        ("0011223304", MassageAreaDecode(state="full", raw="10", source="B4[b2:b1]")),
+        ("0011223302", MassageAreaDecode(state="local", raw="01", source="B4[b2:b1]")),
+        ("0011223306", MassageAreaDecode(state="reserved", raw="11", source="B4[b2:b1]")),
+        ("031513", MassageAreaDecode(state="unknown", raw="-", source="missing B4")),
+        ("00112233", MassageAreaDecode(state="unknown", raw="-", source="missing B4")),
+        ("00112233GG", MassageAreaDecode(state="unknown", raw="GG", source="invalid B4")),
     ],
 )
 def test_decode_massage_area_uses_short_b4_bits_2_to_1(

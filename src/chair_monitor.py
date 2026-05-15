@@ -216,7 +216,7 @@ class DecodedPanel(Static):
             content.append("no candidate", style="yellow")
         else:
             content.append(f"{packed_timer.minutes} min", style="bold green")
-            content.append("  B1-B3 ", style="dim")
+            content.append("  B1..B3 ", style="dim")
             content.append(
                 f"({format_byte_list(packed_timer.raw.split(), self.display_mode)})",
                 style="white",
@@ -240,7 +240,7 @@ class DecodedPanel(Static):
             content.append("unknown", style="yellow")
         content.append(f"  strength={air.strength}", style="white")
         content.append(
-            f"  B4[3]={air.raw_enable} B4[2:1]={air.raw_strength}",
+            f"  B4[b3]={air.raw_enable} B4[b2:b1]={air.raw_strength}",
             style="dim",
         )
 
@@ -251,7 +251,7 @@ class DecodedPanel(Static):
             content.append("reserved", style="yellow")
         else:
             content.append(f"{massage_speed.state}", style="bold green")
-        content.append(f"  B5[5:4]={massage_speed.raw}", style="dim")
+        content.append(f"  B5[b5:b4]={massage_speed.raw}", style="dim")
 
         content.append("\nWidth?: ", style="bold cyan")
         if width.state == "unknown":
@@ -260,7 +260,7 @@ class DecodedPanel(Static):
             content.append("reserved", style="yellow")
         else:
             content.append(width.state, style="bold green")
-        content.append(f"  B6[1:0]={width.raw}", style="dim")
+        content.append(f"  B6[b1:b0]={width.raw}", style="dim")
 
         content.append("\nFoot roller?: ", style="bold cyan")
         if foot_roller.state == "on":
@@ -269,7 +269,7 @@ class DecodedPanel(Static):
             content.append("off", style="bold yellow")
         else:
             content.append("unknown", style="yellow")
-        content.append(f"  B6 high={foot_roller.raw}", style="dim")
+        content.append(f"  B6[b7:b4]={foot_roller.raw}", style="dim")
 
         content.append("\nHeater?: ", style="bold cyan")
         if heater.state == "on":

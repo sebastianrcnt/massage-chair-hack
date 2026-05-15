@@ -1,7 +1,8 @@
 # Chair Status Decoding
 
 This document tracks the current reverse-engineered status map. Byte positions are
-0-based. Bit ranges use `bit7..bit0`, where `bit7` is the most significant bit.
+0-based. Byte labels use uppercase `B`; bit labels use lowercase `b`. For example,
+`B4[b2:b1]` means bits 2 through 1 of byte 4, where `b7` is the most significant bit.
 
 ## Frame Sources
 
@@ -28,25 +29,25 @@ the last byte so it can tolerate length changes.
 
 | Range | Name | Values / rule | Confidence |
 | --- | --- | --- | --- |
-| `B0[7:0]` | Unknown flags | Varies across samples | Unknown |
-| `B1[7:0]` | Timer tens 7-segment byte | Direct lookup in the 7-segment table | Confirmed |
-| `B2[7:4]` | Timer ones segment low nibble | Becomes `ones_segment[3:0]` | Confirmed |
-| `B2[3:0]` | Unknown flags | Varies across samples | Unknown |
-| `B3[7:4]` | Unknown flags | Varies across samples | Unknown |
-| `B3[3:0]` | Timer ones segment high nibble | Becomes `ones_segment[7:4]` | Confirmed |
-| `B4[7:4]` | Unknown flags | Varies across samples | Unknown |
-| `B4[3]` | Air | `1` -> on, `0` -> off | Tentative |
-| `B4[2:1]` | Air strength | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
-| `B4[0]` | Unknown flags | Not mapped | Unknown |
-| `B5[7:6]` | Unknown flags | Not mapped | Unknown |
-| `B5[5:4]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
-| `B5[3:0]` | Unknown flags | Usually observed as `6` in current samples | Unknown |
-| `B6[7:4]` | Foot roller | `on` when high nibble is `1`; otherwise `off` | Tentative |
-| `B6[3:2]` | Unknown flags | Not mapped | Unknown |
-| `B6[1:0]` | Massage width | `00` -> wide, `01` -> medium, `10` -> narrow, `11` reserved | Tentative |
-| `B7[7:0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
-| `last[1]` | Heater | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |
-| `last[7:2], last[0]` | Unknown flags | Not mapped | Unknown |
+| `B0[b7:b0]` | Unknown flags | Varies across samples | Unknown |
+| `B1[b7:b0]` | Timer tens 7-segment byte | Direct lookup in the 7-segment table | Confirmed |
+| `B2[b7:b4]` | Timer ones segment low nibble | Becomes `ones_segment[b3:b0]` | Confirmed |
+| `B2[b3:b0]` | Unknown flags | Varies across samples | Unknown |
+| `B3[b7:b4]` | Unknown flags | Varies across samples | Unknown |
+| `B3[b3:b0]` | Timer ones segment high nibble | Becomes `ones_segment[b7:b4]` | Confirmed |
+| `B4[b7:b4]` | Unknown flags | Varies across samples | Unknown |
+| `B4[b3]` | Air | `1` -> on, `0` -> off | Tentative |
+| `B4[b2:b1]` | Air strength | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
+| `B4[b0]` | Unknown flags | Not mapped | Unknown |
+| `B5[b7:b6]` | Unknown flags | Not mapped | Unknown |
+| `B5[b5:b4]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
+| `B5[b3:b0]` | Unknown flags | Usually observed as `6` in current samples | Unknown |
+| `B6[b7:b4]` | Foot roller | `on` when high nibble is `1`; otherwise `off` | Tentative |
+| `B6[b3:b2]` | Unknown flags | Not mapped | Unknown |
+| `B6[b1:b0]` | Massage width | `00` -> wide, `01` -> medium, `10` -> narrow, `11` reserved | Tentative |
+| `B7[b7:b0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
+| `last[b1]` | Heater | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |
+| `last[b7:b2], last[b0]` | Unknown flags | Not mapped | Unknown |
 
 ### Packed Timer Detail
 
@@ -54,9 +55,9 @@ The timer display is packed as two 7-segment bytes.
 
 | Timer digit | Source |
 | --- | --- |
-| Tens | `B1[7:0]` |
-| Ones high nibble | `B3[3:0]` |
-| Ones low nibble | `B2[7:4]` |
+| Tens | `B1[b7:b0]` |
+| Ones high nibble | `B3[b3:b0]` |
+| Ones low nibble | `B2[b7:b4]` |
 
 Formula:
 
@@ -121,9 +122,9 @@ Observed short frames are 3 bytes in the current notes.
 
 | Range | Name | Values / rule | Confidence |
 | --- | --- | --- | --- |
-| `B0[7:0]` | Unknown | Observed `03`, `00` | Unknown |
-| `B1[7:0]` | Unknown | Observed `15`, `06` | Unknown |
-| `B2[7:0]` | Unknown | Observed `13`, `06`, `15` | Unknown |
+| `B0[b7:b0]` | Unknown | Observed `03`, `00` | Unknown |
+| `B1[b7:b0]` | Unknown | Observed `15`, `06` | Unknown |
+| `B2[b7:b0]` | Unknown | Observed `13`, `06`, `15` | Unknown |
 
 ### Observed Short Samples
 

@@ -94,6 +94,18 @@ def highlight_unknown_bits(old: str, new: str, label: str, long_status: bool) ->
     return result
 
 
+def append_bit_headers(content: Text, label: str, data: str) -> None:
+    bytes_ = split_bytes(data)
+    if not bytes_:
+        return
+
+    prefix = " " * (len(label) + 2)
+    byte_labels = " ".join(f"B{index + 1}".center(8) for index in range(len(bytes_)))
+    bit_labels = " ".join("76543210" for _ in bytes_)
+    content.append(prefix + byte_labels + "\n", style="dim")
+    content.append(prefix + bit_labels + "\n", style="dim")
+
+
 class StatusPanel(Static):
     prev_short: str = ""
     prev_long: str = ""
@@ -128,6 +140,8 @@ class StatusPanel(Static):
         mode = "full raw" if self.show_full_raw else "unknown flags"
         content.append(f"Chair Status ({mode})\n", style="bold green")
         if self.curr_short:
+            if self.display_mode == "bin":
+                append_bit_headers(content, "Short", self.curr_short)
             if self.show_full_raw:
                 content.append_text(
                     highlight_diff(
@@ -148,6 +162,8 @@ class StatusPanel(Static):
                 )
         content.append("\n")
         if self.curr_long:
+            if self.display_mode == "bin":
+                append_bit_headers(content, " Long", self.curr_long)
             if self.show_full_raw:
                 content.append_text(
                     highlight_diff(

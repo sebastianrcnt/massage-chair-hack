@@ -1,12 +1,14 @@
 import pytest
 
 from chair_decode import (
+    AirDecode,
     FootRollerDecode,
     HeaterDecode,
     MassageSpeedDecode,
     PackedTimerDecode,
     SevenSegmentRun,
     WidthDecode,
+    decode_air,
     decode_foot_roller,
     decode_heater,
     decode_long_status,
@@ -109,6 +111,12 @@ def test_decode_long_status_combines_known_fields() -> None:
     assert decoded.seven_segment_runs == [
         SevenSegmentRun(start_byte=2, end_byte=3, digits="05", raw="3F 6D")
     ]
+    assert decoded.air == AirDecode(
+        state="unknown",
+        strength="unknown",
+        raw_enable="-",
+        raw_strength="-",
+    )
     assert decoded.massage_speed == MassageSpeedDecode(state="unknown", raw="-")
     assert decoded.width == WidthDecode(state="unknown", raw="-")
     assert decoded.foot_roller == FootRollerDecode(state="unknown", raw="-")
@@ -184,6 +192,56 @@ def test_decode_massage_speed_uses_sixth_byte_bits_5_to_4(
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
+        (
+            "235BF0D700068180E0",
+            AirDecode(state="off", strength="1", raw_enable="0", raw_strength="00"),
+        ),
+        (
+            "235BF0D70A068180E0",
+            AirDecode(state="on", strength="3", raw_enable="1", raw_strength="01"),
+        ),
+        (
+            "235BF0D70E068180E0",
+            AirDecode(state="on", strength="5", raw_enable="1", raw_strength="11"),
+        ),
+        (
+            "235BF0D70C068180E0",
+            AirDecode(
+                state="on",
+                strength="reserved",
+                raw_enable="1",
+                raw_strength="10",
+            ),
+        ),
+        (
+            "235BF0D7",
+            AirDecode(
+                state="unknown",
+                strength="unknown",
+                raw_enable="-",
+                raw_strength="-",
+            ),
+        ),
+        (
+            "235BF0D7GG068180E0",
+            AirDecode(
+                state="unknown",
+                strength="unknown",
+                raw_enable="GG",
+                raw_strength="GG",
+            ),
+        ),
+    ],
+)
+def test_decode_air_uses_fifth_byte_bits_3_to_1(
+    data: str, expected: AirDecode
+) -> None:
+    assert decode_air(data) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
         ("235BF0D70B068080E0", WidthDecode(state="wide", raw="00")),
         ("235BF0D70B068180E0", WidthDecode(state="medium", raw="01")),
         ("235BF0D70B068280E0", WidthDecode(state="narrow", raw="10")),
@@ -204,7 +262,7 @@ def test_long_known_bit_masks_include_decoded_fields() -> None:
         0xFF,
         0xF0,
         0x0F,
-        0x00,
+        0x0E,
         0x30,
         0xF3,
         0x00,
@@ -219,7 +277,7 @@ def test_unknown_bit_strings_masks_known_bits() -> None:
         "........",
         "....0000",
         "1101....",
-        "00001011",
+        "0000...1",
         "00..0110",
         "....00..",
         "10000000",

@@ -5,6 +5,7 @@ DisplayMode = Literal["bin", "oct", "hex"]
 HeaterState = Literal["on", "off", "unknown"]
 MassageSpeedState = Literal["1", "3", "5", "reserved", "unknown"]
 WidthState = Literal["wide", "medium", "narrow", "reserved", "unknown"]
+AirStrengthState = Literal["1", "3", "5", "reserved", "unknown"]
 
 SEVEN_SEG_DIGITS = {
     "3F": "0",
@@ -53,6 +54,14 @@ class WidthDecode:
 
 
 @dataclass(frozen=True)
+class AirDecode:
+    state: HeaterState
+    strength: AirStrengthState
+    raw_enable: str
+    raw_strength: str
+
+
+@dataclass(frozen=True)
 class PackedTimerDecode:
     minutes: str
     tens_segment: str
@@ -65,6 +74,7 @@ class LongStatusDecode:
     last_bytes: str
     seven_segment_runs: list[SevenSegmentRun]
     packed_timer: PackedTimerDecode | None
+    air: AirDecode
     massage_speed: MassageSpeedDecode
     width: WidthDecode
     foot_roller: FootRollerDecode
@@ -113,6 +123,8 @@ def long_known_bit_masks(data: str) -> list[int]:
         masks[2] |= 0xF0  # Timer ones low nibble.
     if len(bytes_) > 3:
         masks[3] |= 0x0F  # Timer ones high nibble.
+    if len(bytes_) > 4:
+        masks[4] |= 0x0E  # Air on/off + strength.
     if len(bytes_) > 5:
         masks[5] |= 0x30  # Massage speed.
     if len(bytes_) > 6:
@@ -248,6 +260,42 @@ def decode_massage_speed(data: str) -> MassageSpeedDecode:
     return MassageSpeedDecode(state=speed, raw=f"{speed_bits:02b}")
 
 
+def decode_air(data: str) -> AirDecode:
+    bytes_ = split_bytes(data)
+    if len(bytes_) < 5:
+        return AirDecode(
+            state="unknown",
+            strength="unknown",
+            raw_enable="-",
+            raw_strength="-",
+        )
+
+    byte_5 = bytes_[4]
+    if not is_hex_code(byte_5, 2):
+        return AirDecode(
+            state="unknown",
+            strength="unknown",
+            raw_enable=byte_5,
+            raw_strength=byte_5,
+        )
+
+    value = int(byte_5, 16)
+    enabled = "on" if value & 0x08 else "off"
+    strength_bits = (value & 0x06) >> 1
+    strength = {
+        0b00: "1",
+        0b01: "3",
+        0b11: "5",
+    }.get(strength_bits, "reserved")
+
+    return AirDecode(
+        state=enabled,
+        strength=strength,
+        raw_enable=str((value & 0x08) >> 3),
+        raw_strength=f"{strength_bits:02b}",
+    )
+
+
 def decode_width(data: str) -> WidthDecode:
     bytes_ = split_bytes(data)
     if len(bytes_) < 7:
@@ -274,6 +322,7 @@ def decode_long_status(data: str) -> LongStatusDecode:
         last_bytes=last_bytes,
         seven_segment_runs=decode_seven_segment_runs(data),
         packed_timer=decode_packed_timer(data),
+        air=decode_air(data),
         massage_speed=decode_massage_speed(data),
         width=decode_width(data),
         foot_roller=decode_foot_roller(data),

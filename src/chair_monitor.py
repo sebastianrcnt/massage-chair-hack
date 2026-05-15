@@ -193,12 +193,9 @@ class DecodedPanel(Static):
 
         content.append("Decoded\n", style="bold cyan")
         decoded = decode_long_status(self.curr_long)
-        bytes_ = split_bytes(self.curr_long)
-        content.append("Last bytes: ", style="bold cyan")
-        content.append(format_byte_list(bytes_[-4:], self.display_mode), style="white")
 
         packed_timer = decoded.packed_timer
-        content.append("\nTimer: ", style="bold cyan")
+        content.append("Timer: ", style="bold cyan")
         if packed_timer is None:
             content.append("no candidate", style="yellow")
         else:
@@ -214,9 +211,23 @@ class DecodedPanel(Static):
             )
 
         heater = decoded.heater
+        air = decoded.air
         massage_speed = decoded.massage_speed
         width = decoded.width
         foot_roller = decoded.foot_roller
+        content.append("\nAir?: ", style="bold cyan")
+        if air.state == "on":
+            content.append("on", style="bold green")
+        elif air.state == "off":
+            content.append("off", style="bold yellow")
+        else:
+            content.append("unknown", style="yellow")
+        content.append(f"  strength={air.strength}", style="white")
+        content.append(
+            f"  b5[3]={air.raw_enable} b5[2:1]={air.raw_strength}",
+            style="dim",
+        )
+
         content.append("\nSpeed?: ", style="bold cyan")
         if massage_speed.state == "unknown":
             content.append("unknown", style="yellow")

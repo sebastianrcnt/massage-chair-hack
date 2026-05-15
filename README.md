@@ -84,7 +84,7 @@ binary, octal, and hex. Press `P` to pause or resume incoming display updates. C
 are still entered as 4-digit hex codes.
 
 The TUI shows `Chair Status` and `Decoded` side by side. The `Decoded` panel shows
-long-status fields, including the packed 7-segment timer from bytes 2-4, air state,
+long-status fields, including the packed 7-segment timer from `B1..B3`, air state,
 massage speed, massage width, foot roller, and heater.
 
 Known long/short status mappings are documented in [docs/decoding.md](docs/decoding.md).

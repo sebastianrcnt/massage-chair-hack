@@ -179,14 +179,14 @@ def test_decode_foot_roller_uses_b6_bit_7(
     ("data", "expected"),
     [
         ("235BF0D70B001180E0", MassageSpeedDecode(state="1", raw="00")),
-        ("235BF0D70B101180E0", MassageSpeedDecode(state="3", raw="01")),
-        ("235BF0D70B301180E0", MassageSpeedDecode(state="5", raw="11")),
-        ("235BF0D70B201180E0", MassageSpeedDecode(state="reserved", raw="10")),
+        ("235BF0D70B041180E0", MassageSpeedDecode(state="3", raw="01")),
+        ("235BF0D70B0C1180E0", MassageSpeedDecode(state="5", raw="11")),
+        ("235BF0D70B081180E0", MassageSpeedDecode(state="reserved", raw="10")),
         ("235BF0D70B", MassageSpeedDecode(state="unknown", raw="-")),
         ("235BF0D70BG01180E0", MassageSpeedDecode(state="unknown", raw="G0")),
     ],
 )
-def test_decode_massage_speed_uses_sixth_byte_bits_5_to_4(
+def test_decode_massage_speed_uses_sixth_byte_bits_3_to_2(
     data: str, expected: MassageSpeedDecode
 ) -> None:
     assert decode_massage_speed(data) == expected
@@ -266,7 +266,7 @@ def test_long_known_bit_masks_include_decoded_fields() -> None:
         0xF0,
         0x0F,
         0x70,
-        0x30,
+        0x0C,
         0x83,
         0x00,
         0x02,
@@ -281,7 +281,7 @@ def test_unknown_bit_strings_masks_known_bits() -> None:
         "....0000",
         "1101....",
         "0...1011",
-        "00..0110",
+        "0000..10",
         ".00000..",
         "10000000",
         "111000.0",

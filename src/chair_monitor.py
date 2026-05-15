@@ -276,7 +276,7 @@ class DecodedPanel(Static):
             content.append("reserved", style="yellow")
         else:
             content.append(f"{massage_speed.state}", style="bold green")
-        content.append(f"  B5[b5:b4]={massage_speed.raw}", style="dim")
+        content.append(f"  B5[b3:b2]={massage_speed.raw}", style="dim")
 
         content.append("\nWidth?: ", style="bold cyan")
         if width.state == "unknown":

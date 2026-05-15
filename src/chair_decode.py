@@ -138,7 +138,7 @@ def long_known_bit_masks(data: str) -> list[int]:
     if len(bytes_) > 4:
         masks[4] |= 0x70  # Air strength + on/off.
     if len(bytes_) > 5:
-        masks[5] |= 0x30  # Massage speed.
+        masks[5] |= 0x0C  # Massage speed.
     if len(bytes_) > 6:
         masks[6] |= 0x83  # Foot roller + width.
     if masks:
@@ -272,7 +272,7 @@ def decode_massage_speed(data: str) -> MassageSpeedDecode:
     if not is_hex_code(byte_6, 2):
         return MassageSpeedDecode(state="unknown", raw=byte_6)
 
-    speed_bits = (int(byte_6, 16) & 0x30) >> 4
+    speed_bits = (int(byte_6, 16) & 0x0C) >> 2
     speed = {
         0b00: "1",
         0b01: "3",

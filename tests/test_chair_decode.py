@@ -197,15 +197,15 @@ def test_decode_massage_speed_uses_sixth_byte_bits_5_to_4(
             AirDecode(state="off", strength="1", raw_enable="0", raw_strength="00"),
         ),
         (
-            "235BF0D70A068180E0",
+            "235BF0D730068180E0",
             AirDecode(state="on", strength="3", raw_enable="1", raw_strength="01"),
         ),
         (
-            "235BF0D70E068180E0",
+            "235BF0D770068180E0",
             AirDecode(state="on", strength="5", raw_enable="1", raw_strength="11"),
         ),
         (
-            "235BF0D70C068180E0",
+            "235BF0D750068180E0",
             AirDecode(
                 state="on",
                 strength="reserved",
@@ -233,7 +233,7 @@ def test_decode_massage_speed_uses_sixth_byte_bits_5_to_4(
         ),
     ],
 )
-def test_decode_air_uses_fifth_byte_bits_3_to_1(
+def test_decode_air_uses_b4_bits_6_to_4(
     data: str, expected: AirDecode
 ) -> None:
     assert decode_air(data) == expected
@@ -262,7 +262,7 @@ def test_long_known_bit_masks_include_decoded_fields() -> None:
         0xFF,
         0xF0,
         0x0F,
-        0x0E,
+        0x70,
         0x30,
         0xF3,
         0x00,
@@ -277,7 +277,7 @@ def test_unknown_bit_strings_masks_known_bits() -> None:
         "........",
         "....0000",
         "1101....",
-        "0000...1",
+        "0...1011",
         "00..0110",
         "....00..",
         "10000000",

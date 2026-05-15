@@ -2,7 +2,7 @@
 
 This document tracks the current reverse-engineered status map. Byte positions are
 0-based. Byte labels use uppercase `B`; bit labels use lowercase `b`. For example,
-`B4[b2:b1]` means bits 2 through 1 of byte 4, where `b7` is the most significant bit.
+`B4[b6:b5]` means bits 6 through 5 of byte 4, where `b7` is the most significant bit.
 
 ## Frame Sources
 
@@ -35,10 +35,10 @@ the last byte so it can tolerate length changes.
 | `B2[b3:b0]` | Unknown flags | Varies across samples | Unknown |
 | `B3[b7:b4]` | Unknown flags | Varies across samples | Unknown |
 | `B3[b3:b0]` | Timer ones segment high nibble | Becomes `ones_segment[b7:b4]` | Confirmed |
-| `B4[b7:b4]` | Unknown flags | Varies across samples | Unknown |
-| `B4[b3]` | Air | `1` -> on, `0` -> off | Tentative |
-| `B4[b2:b1]` | Air strength | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
-| `B4[b0]` | Unknown flags | Not mapped | Unknown |
+| `B4[b7]` | Unknown flags | Not mapped | Unknown |
+| `B4[b6:b5]` | Air strength | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
+| `B4[b4]` | Air | `1` -> on, `0` -> off | Tentative |
+| `B4[b3:b0]` | Unknown flags | Not mapped | Unknown |
 | `B5[b7:b6]` | Unknown flags | Not mapped | Unknown |
 | `B5[b5:b4]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
 | `B5[b3:b0]` | Unknown flags | Usually observed as `6` in current samples | Unknown |

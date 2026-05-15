@@ -124,7 +124,7 @@ def long_known_bit_masks(data: str) -> list[int]:
     if len(bytes_) > 3:
         masks[3] |= 0x0F  # Timer ones high nibble.
     if len(bytes_) > 4:
-        masks[4] |= 0x0E  # Air on/off + strength.
+        masks[4] |= 0x70  # Air strength + on/off.
     if len(bytes_) > 5:
         masks[5] |= 0x30  # Massage speed.
     if len(bytes_) > 6:
@@ -280,8 +280,8 @@ def decode_air(data: str) -> AirDecode:
         )
 
     value = int(byte_5, 16)
-    enabled = "on" if value & 0x08 else "off"
-    strength_bits = (value & 0x06) >> 1
+    enabled = "on" if value & 0x10 else "off"
+    strength_bits = (value & 0x60) >> 5
     strength = {
         0b00: "1",
         0b01: "3",
@@ -291,7 +291,7 @@ def decode_air(data: str) -> AirDecode:
     return AirDecode(
         state=enabled,
         strength=strength,
-        raw_enable=str((value & 0x08) >> 3),
+        raw_enable=str((value & 0x10) >> 4),
         raw_strength=f"{strength_bits:02b}",
     )
 

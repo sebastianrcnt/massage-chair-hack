@@ -240,7 +240,7 @@ class DecodedPanel(Static):
             content.append("unknown", style="yellow")
         content.append(f"  strength={air.strength}", style="white")
         content.append(
-            f"  B4[b3]={air.raw_enable} B4[b2:b1]={air.raw_strength}",
+            f"  B4[b4]={air.raw_enable} B4[b6:b5]={air.raw_strength}",
             style="dim",
         )
 

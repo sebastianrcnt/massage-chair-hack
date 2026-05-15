@@ -7,6 +7,7 @@ MassageSpeedState = Literal["1", "3", "5", "reserved", "unknown"]
 WidthState = Literal["wide", "medium", "narrow", "reserved", "unknown"]
 AirStrengthState = Literal["1", "3", "5", "reserved", "unknown"]
 MassageAreaState = Literal["point", "full", "local", "reserved", "unknown"]
+MotionState = Literal["on", "off", "unknown"]
 
 SEVEN_SEG_DIGITS = {
     "3F": "0",
@@ -69,6 +70,20 @@ class MassageAreaDecode:
 
 
 @dataclass(frozen=True)
+class MotionDecode:
+    active: MotionState
+    back_raise: MotionState
+    back_recline: MotionState
+    leg_raise: MotionState
+    leg_recline: MotionState
+    raw_active: str
+    raw_back_raise: str
+    raw_back_recline: str
+    raw_leg_raise: str
+    raw_leg_recline: str
+
+
+@dataclass(frozen=True)
 class PackedTimerDecode:
     minutes: str
     tens_segment: str
@@ -83,6 +98,7 @@ class LongStatusDecode:
     packed_timer: PackedTimerDecode | None
     air: AirDecode
     massage_speed: MassageSpeedDecode
+    motion: MotionDecode
     width: WidthDecode
     foot_roller: FootRollerDecode
     heater: HeaterDecode
@@ -140,7 +156,7 @@ def long_known_bit_masks(data: str) -> list[int]:
     if len(bytes_) > 5:
         masks[5] |= 0x0C  # Massage speed.
     if len(bytes_) > 6:
-        masks[6] |= 0x83  # Foot roller + width.
+        masks[6] |= 0xFF  # Foot roller + motion + width.
     if masks:
         masks[-1] |= 0x02  # Heater.
 
@@ -282,6 +298,56 @@ def decode_massage_speed(data: str) -> MassageSpeedDecode:
     return MassageSpeedDecode(state=speed, raw=f"{speed_bits:02b}")
 
 
+def decode_motion(data: str) -> MotionDecode:
+    bytes_ = split_bytes(data)
+    if len(bytes_) < 7:
+        return MotionDecode(
+            active="unknown",
+            back_raise="unknown",
+            back_recline="unknown",
+            leg_raise="unknown",
+            leg_recline="unknown",
+            raw_active="-",
+            raw_back_raise="-",
+            raw_back_recline="-",
+            raw_leg_raise="-",
+            raw_leg_recline="-",
+        )
+
+    byte_7 = bytes_[6]
+    if not is_hex_code(byte_7, 2):
+        return MotionDecode(
+            active="unknown",
+            back_raise="unknown",
+            back_recline="unknown",
+            leg_raise="unknown",
+            leg_recline="unknown",
+            raw_active=byte_7,
+            raw_back_raise=byte_7,
+            raw_back_recline=byte_7,
+            raw_leg_raise=byte_7,
+            raw_leg_recline=byte_7,
+        )
+
+    value = int(byte_7, 16)
+
+    def bit_state(bit_index: int) -> MotionState:
+        return "on" if value & (1 << bit_index) else "off"
+
+    return MotionDecode(
+        active=bit_state(4),
+        back_raise=bit_state(2),
+        back_recline=bit_state(3),
+        leg_raise=bit_state(6),
+        leg_recline=bit_state(5),
+        raw_active=str((value >> 4) & 1),
+        raw_back_raise=str((value >> 2) & 1),
+        raw_back_recline=str((value >> 3) & 1),
+        raw_leg_raise=str((value >> 6) & 1),
+        raw_leg_recline=str((value >> 5) & 1),
+    )
+
+
 def decode_air(data: str) -> AirDecode:
     bytes_ = split_bytes(data)
     if len(bytes_) < 5:
@@ -369,6 +435,7 @@ def decode_long_status(data: str) -> LongStatusDecode:
         packed_timer=decode_packed_timer(data),
         air=decode_air(data),
         massage_speed=decode_massage_speed(data),
+        motion=decode_motion(data),
         width=decode_width(data),
         foot_roller=decode_foot_roller(data),
         heater=decode_heater(data),

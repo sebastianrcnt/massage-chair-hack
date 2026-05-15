@@ -254,6 +254,7 @@ class DecodedPanel(Static):
         heater = decoded.heater
         air = decoded.air
         massage_speed = decoded.massage_speed
+        motion = decoded.motion
         width = decoded.width
         foot_roller = decoded.foot_roller
         content.append("\nAir?: ", style="bold cyan")
@@ -277,6 +278,35 @@ class DecodedPanel(Static):
         else:
             content.append(f"{massage_speed.state}", style="bold green")
         content.append(f"  B5[b3:b2]={massage_speed.raw}", style="dim")
+
+        content.append("\nMotion?: ", style="bold cyan")
+        if motion.active == "on":
+            content.append("moving", style="bold green")
+        elif motion.active == "off":
+            content.append("idle", style="bold yellow")
+        else:
+            content.append("unknown", style="yellow")
+        content.append(f"  B6[b4]={motion.raw_active}", style="dim")
+
+        content.append("\nBack?: ", style="bold cyan")
+        content.append(
+            f"raise={motion.back_raise} recline={motion.back_recline}",
+            style="white",
+        )
+        content.append(
+            f"  B6[b2]={motion.raw_back_raise} B6[b3]={motion.raw_back_recline}",
+            style="dim",
+        )
+
+        content.append("\nLeg?: ", style="bold cyan")
+        content.append(
+            f"raise={motion.leg_raise} recline={motion.leg_recline}",
+            style="white",
+        )
+        content.append(
+            f"  B6[b6]={motion.raw_leg_raise} B6[b5]={motion.raw_leg_recline}",
+            style="dim",
+        )
 
         content.append("\nWidth?: ", style="bold cyan")
         if width.state == "unknown":

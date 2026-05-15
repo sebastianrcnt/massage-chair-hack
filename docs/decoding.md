@@ -44,7 +44,11 @@ the last byte so it can tolerate length changes.
 | `B5[b3:b2]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
 | `B5[b1:b0]` | Unknown flags | Not mapped | Unknown |
 | `B6[b7]` | Foot roller | `1` -> on, `0` -> off | Tentative |
-| `B6[b6:b2]` | Unknown flags | Not mapped | Unknown |
+| `B6[b6]` | Leg raise movement | Blinks `0`/`1` about once per second while the leg rest is raising | Tentative |
+| `B6[b5]` | Leg recline movement | Blinks `0`/`1` about once per second while the leg rest is reclining | Tentative |
+| `B6[b4]` | Chair movement active | `1` while either back or leg movement is physically active; delayed until motion starts; `0` at rest or out of travel range | Tentative |
+| `B6[b3]` | Back recline movement | Blinks `0`/`1` about once per second while the back is reclining | Tentative |
+| `B6[b2]` | Back raise movement | Blinks `0`/`1` about once per second while the back is raising | Tentative |
 | `B6[b1:b0]` | Massage width | `00` -> wide, `01` -> medium, `10` -> narrow, `11` reserved | Tentative |
 | `B7[b7:b0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
 | `last[b1]` | Heater | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |

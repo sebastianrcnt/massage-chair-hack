@@ -6,6 +6,7 @@ from chair_decode import (
     HeaterDecode,
     MassageAreaDecode,
     MassageSpeedDecode,
+    MotionDecode,
     PackedTimerDecode,
     SevenSegmentRun,
     WidthDecode,
@@ -15,6 +16,7 @@ from chair_decode import (
     decode_long_status,
     decode_massage_area,
     decode_massage_speed,
+    decode_motion,
     decode_packed_timer,
     decode_seven_segment_runs,
     decode_width,
@@ -121,6 +123,18 @@ def test_decode_long_status_combines_known_fields() -> None:
         raw_strength="-",
     )
     assert decoded.massage_speed == MassageSpeedDecode(state="unknown", raw="-")
+    assert decoded.motion == MotionDecode(
+        active="unknown",
+        back_raise="unknown",
+        back_recline="unknown",
+        leg_raise="unknown",
+        leg_recline="unknown",
+        raw_active="-",
+        raw_back_raise="-",
+        raw_back_recline="-",
+        raw_leg_raise="-",
+        raw_leg_recline="-",
+    )
     assert decoded.width == WidthDecode(state="unknown", raw="-")
     assert decoded.foot_roller == FootRollerDecode(state="unknown", raw="-")
     assert decoded.heater == HeaterDecode(state="on", raw="00000010")
@@ -190,6 +204,122 @@ def test_decode_massage_speed_uses_sixth_byte_bits_3_to_2(
     data: str, expected: MassageSpeedDecode
 ) -> None:
     assert decode_massage_speed(data) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        (
+            "235BF0D70B060080E0",
+            MotionDecode(
+                active="off",
+                back_raise="off",
+                back_recline="off",
+                leg_raise="off",
+                leg_recline="off",
+                raw_active="0",
+                raw_back_raise="0",
+                raw_back_recline="0",
+                raw_leg_raise="0",
+                raw_leg_recline="0",
+            ),
+        ),
+        (
+            "235BF0D70B061080E0",
+            MotionDecode(
+                active="on",
+                back_raise="off",
+                back_recline="off",
+                leg_raise="off",
+                leg_recline="off",
+                raw_active="1",
+                raw_back_raise="0",
+                raw_back_recline="0",
+                raw_leg_raise="0",
+                raw_leg_recline="0",
+            ),
+        ),
+        (
+            "235BF0D70B061480E0",
+            MotionDecode(
+                active="on",
+                back_raise="on",
+                back_recline="off",
+                leg_raise="off",
+                leg_recline="off",
+                raw_active="1",
+                raw_back_raise="1",
+                raw_back_recline="0",
+                raw_leg_raise="0",
+                raw_leg_recline="0",
+            ),
+        ),
+        (
+            "235BF0D70B061880E0",
+            MotionDecode(
+                active="on",
+                back_raise="off",
+                back_recline="on",
+                leg_raise="off",
+                leg_recline="off",
+                raw_active="1",
+                raw_back_raise="0",
+                raw_back_recline="1",
+                raw_leg_raise="0",
+                raw_leg_recline="0",
+            ),
+        ),
+        (
+            "235BF0D70B067080E0",
+            MotionDecode(
+                active="on",
+                back_raise="off",
+                back_recline="off",
+                leg_raise="on",
+                leg_recline="on",
+                raw_active="1",
+                raw_back_raise="0",
+                raw_back_recline="0",
+                raw_leg_raise="1",
+                raw_leg_recline="1",
+            ),
+        ),
+        (
+            "235BF0D70B06",
+            MotionDecode(
+                active="unknown",
+                back_raise="unknown",
+                back_recline="unknown",
+                leg_raise="unknown",
+                leg_recline="unknown",
+                raw_active="-",
+                raw_back_raise="-",
+                raw_back_recline="-",
+                raw_leg_raise="-",
+                raw_leg_recline="-",
+            ),
+        ),
+        (
+            "235BF0D70B06G080E0",
+            MotionDecode(
+                active="unknown",
+                back_raise="unknown",
+                back_recline="unknown",
+                leg_raise="unknown",
+                leg_recline="unknown",
+                raw_active="G0",
+                raw_back_raise="G0",
+                raw_back_recline="G0",
+                raw_leg_raise="G0",
+                raw_leg_recline="G0",
+            ),
+        ),
+    ],
+)
+def test_decode_motion_uses_seventh_byte_motion_bits(
+    data: str, expected: MotionDecode
+) -> None:
+    assert decode_motion(data) == expected
 
 
 @pytest.mark.parametrize(
@@ -267,7 +397,7 @@ def test_long_known_bit_masks_include_decoded_fields() -> None:
         0x0F,
         0x70,
         0x0C,
-        0x83,
+        0xFF,
         0x00,
         0x02,
     ]
@@ -282,7 +412,7 @@ def test_unknown_bit_strings_masks_known_bits() -> None:
         "1101....",
         "0...1011",
         "0000..10",
-        ".00000..",
+        "........",
         "10000000",
         "111000.0",
     ]

@@ -14,13 +14,14 @@ uv sync
 ```
 
 PlatformIO is provided by the uv environment. Run it as `uv run pio`.
+Common project commands are wrapped by `make`.
 
 ## Build
 
 Compile the firmware:
 
 ```sh
-uv run pio run
+make build
 ```
 
 ## Deploy
@@ -28,13 +29,13 @@ uv run pio run
 Connect the ESP32 over USB, then list available serial devices:
 
 ```sh
-uv run pio device list
+make devices
 ```
 
 Upload the firmware:
 
 ```sh
-uv run pio run --target upload
+make upload
 ```
 
 If PlatformIO does not auto-detect the port, pass it explicitly:
@@ -46,7 +47,7 @@ uv run pio run --target upload --upload-port /dev/cu.usbserial-0001
 After upload, open the serial monitor:
 
 ```sh
-uv run pio device monitor --baud 115200
+make monitor
 ```
 
 Expected boot logs include:
@@ -59,17 +60,21 @@ BLE ready: ChairSniffer
 The device advertises over BLE as `ChairSniffer`.
 
 On first BLE pairing, enter the 6-digit passkey shown by the firmware. The default is
-`000000`. After connecting with `src/chair_monitor.py`, change it with a command such as
+`000000`. After connecting with the monitor app, change it with a command such as
 `PIN:123456`.
 
 ## Common Commands
 
 ```sh
-uv run pio run                         # build
-uv run pio run --target upload          # upload firmware
-uv run pio device monitor               # serial monitor
-uv run pio run --target clean           # clean build artifacts
-uv run pio device list                  # list serial devices
+make build                 # build firmware
+make upload                # upload firmware
+make monitor               # serial monitor at 115200 baud
+make devices               # list serial devices
+make clean                 # clean build artifacts
+make compiledb             # generate compile_commands.json for clangd
+make monitor-app           # run BLE TUI
+make monitor-app-debug     # run BLE TUI with diagnostics
+make check-python          # syntax-check Python monitor
 ```
 
 ## Formatting
@@ -112,7 +117,7 @@ uv run pio project init --ide vscode
 clangd users should generate a local compilation database:
 
 ```sh
-uv run pio run -t compiledb
+make compiledb
 ```
 
 The repository includes `.clangd` to remove ESP32 GCC flags that clangd cannot parse.

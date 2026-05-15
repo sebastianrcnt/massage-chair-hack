@@ -163,6 +163,7 @@ void sendToChair(const String& cmd)
 {
     // Temporarily enable TX.
     chairCommand.end();
+    pinMode(TXD_CMD, OUTPUT);
     chairCommand.begin(9600, SERIAL_8N1, RXD_CMD, TXD_CMD);
 
     chairCommand.print('~');
@@ -170,8 +171,9 @@ void sendToChair(const String& cmd)
     chairCommand.print('\r');
     chairCommand.flush();
 
-    // Return to RX only.
+    // Release TX back to high impedance so the physical remote can drive the line.
     chairCommand.end();
+    pinMode(TXD_CMD, INPUT);
     chairCommand.begin(9600, SERIAL_8N1, RXD_CMD, -1);
 
     bleSend("[SENT] " + cmd);

@@ -12,6 +12,7 @@ import asyncio
 import argparse
 import threading
 from datetime import datetime
+from time import monotonic
 
 from bleak import BleakClient, BleakScanner
 from textual.app import App, ComposeResult
@@ -27,6 +28,10 @@ CHAR_CMD_UUID = "12345678-1234-1234-1234-123456789abe"   # Write
 
 def split_pairs(data: str) -> list[str]:
     return [data[i:i+2] for i in range(0, len(data), 2)]
+
+
+def is_hex_code(value: str, length: int) -> bool:
+    return len(value) == length and all(c in "0123456789ABCDEF" for c in value)
 
 
 def highlight_diff(old: str, new: str, label: str) -> Text:
@@ -94,6 +99,10 @@ class ChairMonitor(App):
         color: green;
         text-style: bold;
     }
+    #connection-status {
+        height: 1;
+        padding: 0 1;
+    }
     #cmd-log {
         height: 1fr;
         border: solid yellow;
@@ -129,9 +138,13 @@ class ChairMonitor(App):
         self.ble_client: BleakClient | None = None
         self.ui_thread_id = threading.get_ident()
         self.notify_count = 0
+        self.last_notify_at: float | None = None
+        self.subscribed_at: float | None = None
+        self.warned_no_notify = False
 
     def compose(self) -> ComposeResult:
         yield Header()
+        yield Static("Disconnected", id="connection-status")
         yield Label(" Chair Status (live)", id="status-title")
         yield StatusPanel("Waiting for data...", id="status-box")
         yield Label(" Commands & Responses", id="cmd-title")
@@ -144,6 +157,10 @@ class ChairMonitor(App):
     async def on_mount(self) -> None:
         self.ui_thread_id = threading.get_ident()
         self.run_worker(self.ble_connect(), exclusive=True)
+
+    def set_connection_status(self, message: str, style: str = "white") -> None:
+        status = self.query_one("#connection-status", Static)
+        status.update(Text(message, style=style))
 
     def debug_log(self, message: str) -> None:
         if not self.debug_enabled:
@@ -210,6 +227,7 @@ class ChairMonitor(App):
     def notification_handler(self, sender, data: bytearray) -> None:
         """Called by bleak when ESP32 sends a notification."""
         self.notify_count += 1
+        self.last_notify_at = monotonic()
         text = data.decode("utf-8", errors="replace").strip()
         if text:
             try:
@@ -225,6 +243,7 @@ class ChairMonitor(App):
 
         while True:
             try:
+                self.set_connection_status("Scanning", "cyan")
                 raw_log.write(
                     Text(f"Scanning for '{self.device_name}'...", style="cyan")
                 )
@@ -233,6 +252,7 @@ class ChairMonitor(App):
                     self.device_name, timeout=10.0
                 )
                 if not device:
+                    self.set_connection_status("Device not found; retrying", "yellow")
                     raw_log.write(Text("Device not found. Retrying...", style="yellow"))
                     await asyncio.sleep(3)
                     continue
@@ -242,13 +262,16 @@ class ChairMonitor(App):
                 )
 
                 self.ble_client = BleakClient(device, timeout=15.0)
+                self.set_connection_status("Connecting", "cyan")
                 await self.ble_client.connect()
 
                 if not self.ble_client.is_connected:
+                    self.set_connection_status("Connection failed", "red")
                     raw_log.write(Text("Connection failed", style="red"))
                     await asyncio.sleep(3)
                     continue
 
+                self.set_connection_status("Connected; subscribing", "green")
                 raw_log.write(Text("Connected!", style="bold green"))
 
                 if self.debug_enabled:
@@ -268,6 +291,11 @@ class ChairMonitor(App):
                 await self.ble_client.start_notify(
                     CHAR_DATA_UUID, self.notification_handler
                 )
+                self.subscribed_at = monotonic()
+                self.last_notify_at = None
+                self.warned_no_notify = False
+                self.notify_count = 0
+                self.set_connection_status("Subscribed; waiting for chair data", "green")
                 raw_log.write(Text("Subscribed to chair data notifications", style="bold green"))
 
                 try:
@@ -278,17 +306,40 @@ class ChairMonitor(App):
 
                 # Stay alive while connected
                 while self.ble_client.is_connected:
+                    now = monotonic()
+                    if self.last_notify_at is None:
+                        elapsed = now - (self.subscribed_at or now)
+                        self.set_connection_status(
+                            f"Subscribed; no notifications yet ({elapsed:.0f}s)",
+                            "yellow" if elapsed >= 5 else "green",
+                        )
+                        if elapsed >= 5 and not self.warned_no_notify:
+                            raw_log.write(
+                                Text(
+                                    "Subscribed, but no BLE notifications received yet",
+                                    style="bold yellow",
+                                )
+                            )
+                            self.warned_no_notify = True
+                    else:
+                        age = now - self.last_notify_at
+                        self.set_connection_status(
+                            f"Receiving; notifications={self.notify_count}, last={age:.0f}s ago",
+                            "green" if age < 5 else "yellow",
+                        )
                     self.debug_log(f"connected; notifications received={self.notify_count}")
                     await asyncio.sleep(1)
 
+                self.set_connection_status("Disconnected; retrying", "yellow")
                 raw_log.write(Text("Disconnected", style="yellow"))
 
             except Exception as e:
+                self.set_connection_status("BLE error; retrying", "red")
                 raw_log.write(Text(f"BLE error: {e}", style="red"))
                 await asyncio.sleep(3)
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
-        cmd = event.value.strip()
+        cmd = event.value.strip().upper()
         cmd_log = self.query_one("#cmd-log", RichLog)
 
         if not cmd:
@@ -301,7 +352,7 @@ class ChairMonitor(App):
 
         # Validate
         is_pin_cmd = cmd.startswith("PIN:") and len(cmd) == 10 and cmd[4:].isdigit()
-        is_chair_cmd = len(cmd) == 4 and not cmd.startswith("PIN")
+        is_chair_cmd = is_hex_code(cmd, 4)
 
         if not is_pin_cmd and not is_chair_cmd:
             cmd_log.write(

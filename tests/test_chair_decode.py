@@ -4,6 +4,7 @@ from chair_decode import (
     AirDecode,
     FootRollerDecode,
     HeaterDecode,
+    MassageAreaDecode,
     MassageSpeedDecode,
     PackedTimerDecode,
     SevenSegmentRun,
@@ -12,6 +13,7 @@ from chair_decode import (
     decode_foot_roller,
     decode_heater,
     decode_long_status,
+    decode_massage_area,
     decode_massage_speed,
     decode_packed_timer,
     decode_seven_segment_runs,
@@ -22,6 +24,7 @@ from chair_decode import (
     is_hex_code,
     is_hex_chunk,
     long_known_bit_masks,
+    short_known_bit_masks,
     split_bytes,
     unknown_bit_strings,
 )
@@ -290,4 +293,36 @@ def test_unknown_bit_strings_pads_trailing_nibble_as_binary_byte() -> None:
         "00000011",
         "00010101",
         "00001101",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ("0011223300", MassageAreaDecode(state="point", raw="00")),
+        ("0011223304", MassageAreaDecode(state="full", raw="10")),
+        ("0011223302", MassageAreaDecode(state="local", raw="01")),
+        ("0011223306", MassageAreaDecode(state="reserved", raw="11")),
+        ("00112233", MassageAreaDecode(state="unknown", raw="-")),
+        ("00112233GG", MassageAreaDecode(state="unknown", raw="GG")),
+    ],
+)
+def test_decode_massage_area_uses_short_b4_bits_2_to_1(
+    data: str, expected: MassageAreaDecode
+) -> None:
+    assert decode_massage_area(data) == expected
+
+
+def test_short_known_bit_masks_include_massage_area() -> None:
+    assert short_known_bit_masks("0011223304") == [0x00, 0x00, 0x00, 0x00, 0x06]
+
+
+def test_short_unknown_bit_strings_masks_massage_area() -> None:
+    masks = short_known_bit_masks("0011223304")
+    assert unknown_bit_strings("0011223304", masks) == [
+        "00000000",
+        "00010001",
+        "00100010",
+        "00110011",
+        "00000..0",
     ]

@@ -6,6 +6,7 @@ HeaterState = Literal["on", "off", "unknown"]
 MassageSpeedState = Literal["1", "3", "5", "reserved", "unknown"]
 WidthState = Literal["wide", "medium", "narrow", "reserved", "unknown"]
 AirStrengthState = Literal["1", "3", "5", "reserved", "unknown"]
+MassageAreaState = Literal["point", "full", "local", "reserved", "unknown"]
 
 SEVEN_SEG_DIGITS = {
     "3F": "0",
@@ -62,6 +63,12 @@ class AirDecode:
 
 
 @dataclass(frozen=True)
+class MassageAreaDecode:
+    state: MassageAreaState
+    raw: str
+
+
+@dataclass(frozen=True)
 class PackedTimerDecode:
     minutes: str
     tens_segment: str
@@ -79,6 +86,11 @@ class LongStatusDecode:
     width: WidthDecode
     foot_roller: FootRollerDecode
     heater: HeaterDecode
+
+
+@dataclass(frozen=True)
+class ShortStatusDecode:
+    massage_area: MassageAreaDecode
 
 
 def split_bytes(data: str) -> list[str]:
@@ -131,6 +143,16 @@ def long_known_bit_masks(data: str) -> list[int]:
         masks[6] |= 0xF3  # Foot roller high nibble + width low bits.
     if masks:
         masks[-1] |= 0x02  # Heater.
+
+    return masks
+
+
+def short_known_bit_masks(data: str) -> list[int]:
+    bytes_ = split_bytes(data)
+    masks = [0] * len(bytes_)
+
+    if len(bytes_) > 4:
+        masks[4] |= 0x06  # Massage area.
 
     return masks
 
@@ -296,6 +318,25 @@ def decode_air(data: str) -> AirDecode:
     )
 
 
+def decode_massage_area(data: str) -> MassageAreaDecode:
+    bytes_ = split_bytes(data)
+    if len(bytes_) < 5:
+        return MassageAreaDecode(state="unknown", raw="-")
+
+    byte_4 = bytes_[4]
+    if not is_hex_code(byte_4, 2):
+        return MassageAreaDecode(state="unknown", raw=byte_4)
+
+    area_bits = (int(byte_4, 16) & 0x06) >> 1
+    area = {
+        0b00: "point",
+        0b10: "full",
+        0b01: "local",
+    }.get(area_bits, "reserved")
+
+    return MassageAreaDecode(state=area, raw=f"{area_bits:02b}")
+
+
 def decode_width(data: str) -> WidthDecode:
     bytes_ = split_bytes(data)
     if len(bytes_) < 7:
@@ -313,6 +354,10 @@ def decode_width(data: str) -> WidthDecode:
     }.get(width_bits, "reserved")
 
     return WidthDecode(state=width, raw=f"{width_bits:02b}")
+
+
+def decode_short_status(data: str) -> ShortStatusDecode:
+    return ShortStatusDecode(massage_area=decode_massage_area(data))
 
 
 def decode_long_status(data: str) -> LongStatusDecode:

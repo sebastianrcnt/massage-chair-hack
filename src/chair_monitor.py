@@ -25,12 +25,14 @@ from rich.text import Text
 from chair_decode import (
     DisplayMode,
     decode_long_status,
+    decode_short_status,
     format_byte,
     format_byte_list,
     format_bytes,
     is_hex_chunk,
     is_hex_code,
     long_known_bit_masks,
+    short_known_bit_masks,
     split_bytes,
     unknown_bit_strings,
 )
@@ -70,11 +72,11 @@ def highlight_diff(old: str, new: str, label: str, display_mode: DisplayMode) ->
 def highlight_unknown_bits(old: str, new: str, label: str, long_status: bool) -> Text:
     old_units = unknown_bit_strings(
         old,
-        long_known_bit_masks(old) if long_status else [0] * len(split_bytes(old)),
+        long_known_bit_masks(old) if long_status else short_known_bit_masks(old),
     )
     new_units = unknown_bit_strings(
         new,
-        long_known_bit_masks(new) if long_status else [0] * len(split_bytes(new)),
+        long_known_bit_masks(new) if long_status else short_known_bit_masks(new),
     )
     result = Text()
     result.append(f"{label}: ", style="bold cyan")
@@ -188,6 +190,7 @@ class StatusPanel(Static):
 
 
 class DecodedPanel(Static):
+    curr_short: str = ""
     curr_long: str = ""
     display_mode: DisplayMode = "bin"
 
@@ -199,15 +202,37 @@ class DecodedPanel(Static):
         self.curr_long = data
         self._render_decoded()
 
+    def update_short(self, data: str) -> None:
+        self.curr_short = data
+        self._render_decoded()
+
     def _render_decoded(self) -> None:
         content = Text()
-        if not self.curr_long:
+        if not self.curr_short and not self.curr_long:
             content.append("Decoded\n", style="bold cyan")
-            content.append("Waiting for long status...", style="dim")
+            content.append("Waiting for status...", style="dim")
             self.update(content)
             return
 
         content.append("Decoded\n", style="bold cyan")
+        if self.curr_short:
+            decoded_short = decode_short_status(self.curr_short)
+            area = decoded_short.massage_area
+            content.append("Area?: ", style="bold cyan")
+            if area.state == "unknown":
+                content.append("unknown", style="yellow")
+            elif area.state == "reserved":
+                content.append("reserved", style="yellow")
+            else:
+                content.append(area.state, style="bold green")
+            content.append(f"  B4[b2:b1]={area.raw}", style="dim")
+
+        if not self.curr_long:
+            self.update(content)
+            return
+
+        if self.curr_short:
+            content.append("\n")
         decoded = decode_long_status(self.curr_long)
 
         packed_timer = decoded.packed_timer
@@ -531,6 +556,7 @@ class ChairMonitor(App):
 
             elif data_len <= 12:
                 status.update_short(data)
+                self.query_one("#decoded-box", DecodedPanel).update_short(data)
 
             else:
                 status.update_long(data)

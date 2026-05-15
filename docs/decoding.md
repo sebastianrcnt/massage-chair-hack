@@ -115,16 +115,18 @@ These samples are covered by `tests/test_chair_decode.py`.
 
 ## Short Status Map
 
-Short status frames are displayed and diffed by the TUI, but no field-level short-status
-mapping is confirmed yet.
-
-Observed short frames are 3 bytes in the current notes.
+Short status frames are displayed and diffed by the TUI. Some captures are 3 bytes, but
+newer observations include at least 5 bytes.
 
 | Range | Name | Values / rule | Confidence |
 | --- | --- | --- | --- |
 | `B0[b7:b0]` | Unknown | Observed `03`, `00` | Unknown |
 | `B1[b7:b0]` | Unknown | Observed `15`, `06` | Unknown |
 | `B2[b7:b0]` | Unknown | Observed `13`, `06`, `15` | Unknown |
+| `B3[b7:b0]` | Unknown | Not mapped | Unknown |
+| `B4[b7:b3]` | Unknown | Not mapped | Unknown |
+| `B4[b2:b1]` | Massage area | `00` -> point, `10` -> full, `01` -> local, `11` reserved | Tentative |
+| `B4[b0]` | Unknown | Not mapped | Unknown |
 
 ### Observed Short Samples
 
@@ -141,7 +143,7 @@ believed to belong to long status instead.
 ## Unknowns
 
 - Most long-status bytes and bit flags are still unmapped.
-- Short status has no confirmed field-level mapping yet.
+- Short status has only one tentative field-level mapping so far.
 - Air, massage speed, massage width, foot roller, and heater rules should be validated
   against more captures.
 - Some bits in the timer sample bytes vary while the displayed timer stays the same; those

@@ -22,9 +22,9 @@ HardwareSerial chairStatus(2);
 HardwareSerial chairCommand(1);
 
 // === BLE ===
-BLEServer *pServer = nullptr;
-BLECharacteristic *pDataChar = nullptr;
-BLECharacteristic *pCmdChar = nullptr;
+BLEServer* pServer = nullptr;
+BLECharacteristic* pDataChar = nullptr;
+BLECharacteristic* pCmdChar = nullptr;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
 
@@ -36,15 +36,15 @@ uint32_t blePin = 0;
 String lineY = "";
 String lineW = "";
 
-void bleSend(const String &s);
-void sendToChair(const String &cmd);
-void sendLine(const String &s);
+void bleSend(const String& s);
+void sendToChair(const String& cmd);
+void sendLine(const String& s);
 
 // ============================================================
 // BLE Security Callback
 // ============================================================
 class MySecurity : public BLESecurityCallbacks {
-public:
+  public:
     uint32_t onPassKeyRequest() override
     {
         Serial.printf("PassKey requested, returning: %06d\n", blePin);
@@ -62,10 +62,7 @@ public:
         return true;
     }
 
-    bool onSecurityRequest() override
-    {
-        return true;
-    }
+    bool onSecurityRequest() override { return true; }
 
     void onAuthenticationComplete(esp_ble_auth_cmpl_t authCmpl) override
     {
@@ -81,15 +78,15 @@ public:
 // BLE Server Callbacks
 // ============================================================
 class MyServerCallbacks : public BLEServerCallbacks {
-public:
-    void onConnect(BLEServer *server) override
+  public:
+    void onConnect(BLEServer* server) override
     {
         (void)server;
         deviceConnected = true;
         Serial.println("Client connected");
     }
 
-    void onDisconnect(BLEServer *server) override
+    void onDisconnect(BLEServer* server) override
     {
         (void)server;
         deviceConnected = false;
@@ -101,8 +98,8 @@ public:
 // BLE Command Characteristic Callback
 // ============================================================
 class MyCmdCallback : public BLECharacteristicCallbacks {
-public:
-    void onWrite(BLECharacteristic *characteristic) override
+  public:
+    void onWrite(BLECharacteristic* characteristic) override
     {
         String val = characteristic->getValue().c_str();
         val.trim();
@@ -128,8 +125,8 @@ public:
                 bleSend(msg);
 
                 // Update BLE security
-                esp_ble_gap_set_security_param(
-                    ESP_BLE_SM_SET_STATIC_PASSKEY, &blePin, sizeof(uint32_t));
+                esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &blePin,
+                                               sizeof(uint32_t));
             } else {
                 bleSend("[PIN] Invalid. Use PIN:XXXX (0000-9999)");
             }
@@ -149,7 +146,7 @@ public:
 // ============================================================
 // Functions
 // ============================================================
-void bleSend(const String &s)
+void bleSend(const String& s)
 {
     if (deviceConnected && pDataChar) {
         pDataChar->setValue(s.c_str());
@@ -158,7 +155,7 @@ void bleSend(const String &s)
     Serial.println(s);
 }
 
-void sendToChair(const String &cmd)
+void sendToChair(const String& cmd)
 {
     // Temporarily enable TX.
     chairCommand.end();
@@ -176,7 +173,7 @@ void sendToChair(const String &cmd)
     bleSend("[SENT] " + cmd);
 }
 
-void sendLine(const String &s)
+void sendLine(const String& s)
 {
     digitalWrite(2, HIGH);
     bleSend(s);
@@ -205,8 +202,7 @@ void setup()
     BLEDevice::setSecurityCallbacks(new MySecurity());
 
     // Set static passkey.
-    esp_ble_gap_set_security_param(
-        ESP_BLE_SM_SET_STATIC_PASSKEY, &blePin, sizeof(uint32_t));
+    esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &blePin, sizeof(uint32_t));
 
     // Auth mode: passkey entry.
     esp_ble_auth_req_t authReq = ESP_LE_AUTH_REQ_SC_MITM_BOND;
@@ -229,26 +225,22 @@ void setup()
     pServer->setCallbacks(new MyServerCallbacks());
 
     // Create BLE service.
-    BLEService *service = pServer->createService(SERVICE_UUID);
+    BLEService* service = pServer->createService(SERVICE_UUID);
 
     // Data characteristic (Notify).
-    pDataChar = service->createCharacteristic(
-        CHAR_DATA_UUID,
-        BLECharacteristic::PROPERTY_NOTIFY |
-            BLECharacteristic::PROPERTY_READ);
+    pDataChar = service->createCharacteristic(CHAR_DATA_UUID, BLECharacteristic::PROPERTY_NOTIFY |
+                                                                  BLECharacteristic::PROPERTY_READ);
     pDataChar->addDescriptor(new BLE2902());
 
     // Command characteristic (Write).
-    pCmdChar = service->createCharacteristic(
-        CHAR_CMD_UUID,
-        BLECharacteristic::PROPERTY_WRITE);
+    pCmdChar = service->createCharacteristic(CHAR_CMD_UUID, BLECharacteristic::PROPERTY_WRITE);
     pCmdChar->setCallbacks(new MyCmdCallback());
 
     // Start.
     service->start();
 
     // Advertising.
-    BLEAdvertising *advertising = BLEDevice::getAdvertising();
+    BLEAdvertising* advertising = BLEDevice::getAdvertising();
     advertising->addServiceUUID(SERVICE_UUID);
     advertising->setScanResponse(true);
     advertising->setMinPreferred(0x06);

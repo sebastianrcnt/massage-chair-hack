@@ -4,6 +4,7 @@ from typing import Literal
 DisplayMode = Literal["bin", "oct", "hex"]
 HeaterState = Literal["on", "off", "unknown"]
 MassageSpeedState = Literal["1", "3", "5", "reserved", "unknown"]
+WidthState = Literal["wide", "medium", "narrow", "reserved", "unknown"]
 
 SEVEN_SEG_DIGITS = {
     "3F": "0",
@@ -46,6 +47,12 @@ class MassageSpeedDecode:
 
 
 @dataclass(frozen=True)
+class WidthDecode:
+    state: WidthState
+    raw: str
+
+
+@dataclass(frozen=True)
 class PackedTimerDecode:
     minutes: str
     tens_segment: str
@@ -59,6 +66,7 @@ class LongStatusDecode:
     seven_segment_runs: list[SevenSegmentRun]
     packed_timer: PackedTimerDecode | None
     massage_speed: MassageSpeedDecode
+    width: WidthDecode
     foot_roller: FootRollerDecode
     heater: HeaterDecode
 
@@ -93,6 +101,44 @@ def format_bytes(data: str, display_mode: DisplayMode) -> str:
 
 def format_byte_list(bytes_: list[str], display_mode: DisplayMode) -> str:
     return " ".join(format_byte(byte, display_mode) for byte in bytes_)
+
+
+def long_known_bit_masks(data: str) -> list[int]:
+    bytes_ = split_bytes(data)
+    masks = [0] * len(bytes_)
+
+    if len(bytes_) > 1:
+        masks[1] |= 0xFF  # Timer tens segment.
+    if len(bytes_) > 2:
+        masks[2] |= 0xF0  # Timer ones low nibble.
+    if len(bytes_) > 3:
+        masks[3] |= 0x0F  # Timer ones high nibble.
+    if len(bytes_) > 5:
+        masks[5] |= 0x30  # Massage speed.
+    if len(bytes_) > 6:
+        masks[6] |= 0xF3  # Foot roller high nibble + width low bits.
+    if masks:
+        masks[-1] |= 0x02  # Heater.
+
+    return masks
+
+
+def unknown_bit_strings(data: str, known_masks: list[int]) -> list[str]:
+    result: list[str] = []
+    for index, byte in enumerate(split_bytes(data)):
+        if not is_hex_code(byte, 2):
+            result.append(byte)
+            continue
+
+        mask = known_masks[index] if index < len(known_masks) else 0
+        value = int(byte, 16)
+        result.append(
+            "".join(
+                "." if mask & (1 << bit_index) else str((value >> bit_index) & 1)
+                for bit_index in range(7, -1, -1)
+            )
+        )
+    return result
 
 
 def decode_seven_segment_runs(data: str) -> list[SevenSegmentRun]:
@@ -202,6 +248,25 @@ def decode_massage_speed(data: str) -> MassageSpeedDecode:
     return MassageSpeedDecode(state=speed, raw=f"{speed_bits:02b}")
 
 
+def decode_width(data: str) -> WidthDecode:
+    bytes_ = split_bytes(data)
+    if len(bytes_) < 7:
+        return WidthDecode(state="unknown", raw="-")
+
+    byte_7 = bytes_[6]
+    if not is_hex_code(byte_7, 2):
+        return WidthDecode(state="unknown", raw=byte_7)
+
+    width_bits = int(byte_7, 16) & 0x03
+    width = {
+        0b00: "wide",
+        0b01: "medium",
+        0b10: "narrow",
+    }.get(width_bits, "reserved")
+
+    return WidthDecode(state=width, raw=f"{width_bits:02b}")
+
+
 def decode_long_status(data: str) -> LongStatusDecode:
     bytes_ = split_bytes(data)
     last_bytes = " ".join(bytes_[-4:]) if bytes_ else "-"
@@ -210,6 +275,7 @@ def decode_long_status(data: str) -> LongStatusDecode:
         seven_segment_runs=decode_seven_segment_runs(data),
         packed_timer=decode_packed_timer(data),
         massage_speed=decode_massage_speed(data),
+        width=decode_width(data),
         foot_roller=decode_foot_roller(data),
         heater=decode_heater(data),
     )

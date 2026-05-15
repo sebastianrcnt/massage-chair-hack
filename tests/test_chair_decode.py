@@ -6,18 +6,22 @@ from chair_decode import (
     MassageSpeedDecode,
     PackedTimerDecode,
     SevenSegmentRun,
+    WidthDecode,
     decode_foot_roller,
     decode_heater,
     decode_long_status,
     decode_massage_speed,
     decode_packed_timer,
     decode_seven_segment_runs,
+    decode_width,
     format_byte,
     format_byte_list,
     format_bytes,
     is_hex_code,
     is_hex_chunk,
+    long_known_bit_masks,
     split_bytes,
+    unknown_bit_strings,
 )
 
 
@@ -106,6 +110,7 @@ def test_decode_long_status_combines_known_fields() -> None:
         SevenSegmentRun(start_byte=2, end_byte=3, digits="05", raw="3F 6D")
     ]
     assert decoded.massage_speed == MassageSpeedDecode(state="unknown", raw="-")
+    assert decoded.width == WidthDecode(state="unknown", raw="-")
     assert decoded.foot_roller == FootRollerDecode(state="unknown", raw="-")
     assert decoded.heater == HeaterDecode(state="on", raw="00000010")
 
@@ -174,3 +179,49 @@ def test_decode_massage_speed_uses_sixth_byte_bits_5_to_4(
     data: str, expected: MassageSpeedDecode
 ) -> None:
     assert decode_massage_speed(data) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        ("235BF0D70B068080E0", WidthDecode(state="wide", raw="00")),
+        ("235BF0D70B068180E0", WidthDecode(state="medium", raw="01")),
+        ("235BF0D70B068280E0", WidthDecode(state="narrow", raw="10")),
+        ("235BF0D70B068380E0", WidthDecode(state="reserved", raw="11")),
+        ("235BF0D70B06", WidthDecode(state="unknown", raw="-")),
+        ("235BF0D70B06G180E0", WidthDecode(state="unknown", raw="G1")),
+    ],
+)
+def test_decode_width_uses_seventh_byte_low_bits(
+    data: str, expected: WidthDecode
+) -> None:
+    assert decode_width(data) == expected
+
+
+def test_long_known_bit_masks_include_decoded_fields() -> None:
+    assert long_known_bit_masks("235BF0D70B068180E0") == [
+        0x00,
+        0xFF,
+        0xF0,
+        0x0F,
+        0x00,
+        0x30,
+        0xF3,
+        0x00,
+        0x02,
+    ]
+
+
+def test_unknown_bit_strings_masks_known_bits() -> None:
+    masks = long_known_bit_masks("235BF0D70B068180E0")
+    assert unknown_bit_strings("235BF0D70B068180E0", masks) == [
+        "00100011",
+        "........",
+        "....0000",
+        "1101....",
+        "00001011",
+        "00..0110",
+        "....00..",
+        "10000000",
+        "111000.0",
+    ]

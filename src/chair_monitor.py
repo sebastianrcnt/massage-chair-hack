@@ -30,7 +30,9 @@ from chair_decode import (
     format_bytes,
     is_hex_chunk,
     is_hex_code,
+    long_known_bit_masks,
     split_bytes,
+    unknown_bit_strings,
 )
 
 # Must match ESP32 code
@@ -65,15 +67,44 @@ def highlight_diff(old: str, new: str, label: str, display_mode: DisplayMode) ->
     return result
 
 
+def highlight_unknown_bits(old: str, new: str, label: str, long_status: bool) -> Text:
+    old_units = unknown_bit_strings(
+        old,
+        long_known_bit_masks(old) if long_status else [0] * len(split_bytes(old)),
+    )
+    new_units = unknown_bit_strings(
+        new,
+        long_known_bit_masks(new) if long_status else [0] * len(split_bytes(new)),
+    )
+    result = Text()
+    result.append(f"{label}: ", style="bold cyan")
+
+    for unit_index, unit in enumerate(new_units):
+        old_unit = old_units[unit_index] if unit_index < len(old_units) else ""
+        for char_index, char in enumerate(unit):
+            style = "dim" if char == "." else "white"
+            if char != "." and (
+                char_index >= len(old_unit) or char != old_unit[char_index]
+            ):
+                style = "bold red"
+            result.append(char, style=style)
+        if unit_index < len(new_units) - 1:
+            result.append(" ", style="white")
+
+    return result
+
+
 class StatusPanel(Static):
     prev_short: str = ""
     prev_long: str = ""
     curr_short: str = ""
     curr_long: str = ""
     display_mode: DisplayMode = "bin"
+    show_full_raw = False
 
-    def set_format(self, display_mode: DisplayMode) -> None:
+    def set_format(self, display_mode: DisplayMode, show_full_raw: bool) -> None:
         self.display_mode = display_mode
+        self.show_full_raw = show_full_raw
         self._render_status()
 
     def update_short(self, data: str) -> bool:
@@ -94,26 +125,47 @@ class StatusPanel(Static):
 
     def _render_status(self):
         content = Text()
-        content.append("Chair Status\n", style="bold green")
+        mode = "full raw" if self.show_full_raw else "unknown flags"
+        content.append(f"Chair Status ({mode})\n", style="bold green")
         if self.curr_short:
-            content.append_text(
-                highlight_diff(
-                    self.prev_short,
-                    self.curr_short,
-                    "Short",
-                    self.display_mode,
+            if self.show_full_raw:
+                content.append_text(
+                    highlight_diff(
+                        self.prev_short,
+                        self.curr_short,
+                        "Short",
+                        self.display_mode,
+                    )
                 )
-            )
+            else:
+                content.append_text(
+                    highlight_unknown_bits(
+                        self.prev_short,
+                        self.curr_short,
+                        "Short",
+                        False,
+                    )
+                )
         content.append("\n")
         if self.curr_long:
-            content.append_text(
-                highlight_diff(
-                    self.prev_long,
-                    self.curr_long,
-                    " Long",
-                    self.display_mode,
+            if self.show_full_raw:
+                content.append_text(
+                    highlight_diff(
+                        self.prev_long,
+                        self.curr_long,
+                        " Long",
+                        self.display_mode,
+                    )
                 )
-            )
+            else:
+                content.append_text(
+                    highlight_unknown_bits(
+                        self.prev_long,
+                        self.curr_long,
+                        " Long",
+                        True,
+                    )
+                )
         elif not self.curr_short:
             content.append("Waiting for data...", style="dim")
         self.update(content)
@@ -163,6 +215,7 @@ class DecodedPanel(Static):
 
         heater = decoded.heater
         massage_speed = decoded.massage_speed
+        width = decoded.width
         foot_roller = decoded.foot_roller
         content.append("\nSpeed?: ", style="bold cyan")
         if massage_speed.state == "unknown":
@@ -172,6 +225,15 @@ class DecodedPanel(Static):
         else:
             content.append(f"{massage_speed.state}", style="bold green")
         content.append(f"  b6[5:4]={massage_speed.raw}", style="dim")
+
+        content.append("\nWidth?: ", style="bold cyan")
+        if width.state == "unknown":
+            content.append("unknown", style="yellow")
+        elif width.state == "reserved":
+            content.append("reserved", style="yellow")
+        else:
+            content.append(width.state, style="bold green")
+        content.append(f"  b7[1:0]={width.raw}", style="dim")
 
         content.append("\nFoot roller?: ", style="bold cyan")
         if foot_roller.state == "on":
@@ -281,6 +343,7 @@ class ChairMonitor(App):
 
     TITLE = "Massage Chair Monitor"
     BINDINGS = [
+        Binding("space", "toggle_status_raw", "Raw/Unknown"),
         Binding("p", "toggle_pause", "Pause"),
         Binding("f2", "toggle_display_mode", "Display"),
         Binding("ctrl+q", "quit", "Quit"),
@@ -298,6 +361,7 @@ class ChairMonitor(App):
         self.subscribed_at: float | None = None
         self.warned_no_notify = False
         self.display_mode = "bin"
+        self.show_full_status_raw = False
         self.paused = False
         self.paused_count = 0
         self.status_row_height = 12
@@ -306,7 +370,7 @@ class ChairMonitor(App):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
-            "Display: BIN / BYTE | LIVE (F2 mode, P pause)",
+            "Display: BIN / BYTE | UNKNOWN | LIVE (F2 mode, Space raw, P pause)",
             id="display-mode",
         )
         yield Static("Disconnected", id="connection-status")
@@ -334,15 +398,23 @@ class ChairMonitor(App):
 
     def set_display_mode_label(self) -> None:
         mode = self.display_mode.upper()
+        status_mode = "RAW" if self.show_full_status_raw else "UNKNOWN"
         pause = f"PAUSED, skipped={self.paused_count}" if self.paused else "LIVE"
         label = self.query_one("#display-mode", Static)
         style = "bold yellow" if self.paused else "cyan"
         label.update(
-            Text(f"Display: {mode} / BYTE | {pause} (F2 mode, P pause)", style=style)
+            Text(
+                f"Display: {mode} / BYTE | {status_mode} | {pause} "
+                "(F2 mode, Space raw, P pause)",
+                style=style,
+            )
         )
 
     def refresh_status_format(self) -> None:
-        self.query_one("#status-box", StatusPanel).set_format(self.display_mode)
+        self.query_one("#status-box", StatusPanel).set_format(
+            self.display_mode,
+            self.show_full_status_raw,
+        )
         self.query_one("#decoded-box", DecodedPanel).set_format(self.display_mode)
 
     def start_log_resize(self) -> None:
@@ -368,6 +440,14 @@ class ChairMonitor(App):
             "hex": "hex",
         }[self.display_mode]
         raw_log.write(Text(f"Display mode changed to {mode}", style="cyan"))
+
+    def action_toggle_status_raw(self) -> None:
+        self.show_full_status_raw = not self.show_full_status_raw
+        self.set_display_mode_label()
+        self.refresh_status_format()
+        raw_log = self.query_one("#raw-log", RichLog)
+        mode = "full raw" if self.show_full_status_raw else "unknown flags"
+        raw_log.write(Text(f"Chair status changed to {mode}", style="cyan"))
 
     def action_toggle_pause(self) -> None:
         self.paused = not self.paused

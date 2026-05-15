@@ -39,7 +39,8 @@ the last byte so it can tolerate length changes.
 | `B6[5:4]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
 | `B6[3:0]` | Unknown flags | Usually observed as `6` in current samples | Unknown |
 | `B7[7:4]` | Foot roller | `on` when high nibble is `1`; otherwise `off` | Tentative |
-| `B7[3:0]` | Unknown flags | Not mapped | Unknown |
+| `B7[3:2]` | Unknown flags | Not mapped | Unknown |
+| `B7[1:0]` | Massage width | `00` -> wide, `01` -> medium, `10` -> narrow, `11` reserved | Tentative |
 | `B8[7:0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
 | `last[1]` | Heater | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |
 | `last[7:2], last[0]` | Unknown flags | Not mapped | Unknown |
@@ -137,6 +138,7 @@ believed to belong to long status instead.
 
 - Most long-status bytes and bit flags are still unmapped.
 - Short status has no confirmed field-level mapping yet.
-- Massage speed, foot roller, and heater rules should be validated against more captures.
+- Massage speed, massage width, foot roller, and heater rules should be validated against
+  more captures.
 - Some bits in the timer sample bytes vary while the displayed timer stays the same; those
   bits are likely unrelated flags, but their meanings are unknown.

@@ -78,9 +78,10 @@ make check-python          # syntax-check Python monitor
 make test                  # run Python unit tests
 ```
 
-The BLE TUI displays status bytes as binary by default. Press `F2` to cycle byte display
-between binary, octal, and hex. Press `P` to pause or resume incoming display updates.
-Commands are still entered as 4-digit hex codes.
+The BLE TUI displays unknown status bits by default. Press `Space` to toggle the status
+panel between unknown-only and full raw display. Press `F2` to cycle byte display between
+binary, octal, and hex. Press `P` to pause or resume incoming display updates. Commands
+are still entered as 4-digit hex codes.
 
 The TUI shows `Chair Status` and `Decoded` side by side. The `Decoded` panel shows
 long-status fields, including the packed 7-segment timer from bytes 2-4, a foot roller

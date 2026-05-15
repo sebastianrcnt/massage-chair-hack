@@ -283,3 +283,11 @@ def test_unknown_bit_strings_masks_known_bits() -> None:
         "10000000",
         "111000.0",
     ]
+
+
+def test_unknown_bit_strings_pads_trailing_nibble_as_binary_byte() -> None:
+    assert unknown_bit_strings("0315D", [0, 0, 0]) == [
+        "00000011",
+        "00010101",
+        "00001101",
+    ]

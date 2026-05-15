@@ -138,7 +138,7 @@ def long_known_bit_masks(data: str) -> list[int]:
 def unknown_bit_strings(data: str, known_masks: list[int]) -> list[str]:
     result: list[str] = []
     for index, byte in enumerate(split_bytes(data)):
-        if not is_hex_code(byte, 2):
+        if not is_hex_chunk(byte):
             result.append(byte)
             continue
 

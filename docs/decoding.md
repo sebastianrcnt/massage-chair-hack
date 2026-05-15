@@ -42,8 +42,8 @@ the last byte so it can tolerate length changes.
 | `B5[b7:b6]` | Unknown flags | Not mapped | Unknown |
 | `B5[b5:b4]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
 | `B5[b3:b0]` | Unknown flags | Usually observed as `6` in current samples | Unknown |
-| `B6[b7:b4]` | Foot roller | `on` when high nibble is `1`; otherwise `off` | Tentative |
-| `B6[b3:b2]` | Unknown flags | Not mapped | Unknown |
+| `B6[b7]` | Foot roller | `1` -> on, `0` -> off | Tentative |
+| `B6[b6:b2]` | Unknown flags | Not mapped | Unknown |
 | `B6[b1:b0]` | Massage width | `00` -> wide, `01` -> medium, `10` -> narrow, `11` reserved | Tentative |
 | `B7[b7:b0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
 | `last[b1]` | Heater | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |

@@ -140,7 +140,7 @@ def long_known_bit_masks(data: str) -> list[int]:
     if len(bytes_) > 5:
         masks[5] |= 0x30  # Massage speed.
     if len(bytes_) > 6:
-        masks[6] |= 0xF3  # Foot roller high nibble + width low bits.
+        masks[6] |= 0x83  # Foot roller + width.
     if masks:
         masks[-1] |= 0x02  # Heater.
 
@@ -257,10 +257,10 @@ def decode_foot_roller(data: str) -> FootRollerDecode:
     if not is_hex_code(byte_7, 2):
         return FootRollerDecode(state="unknown", raw=byte_7)
 
-    high_nibble = byte_7[0]
-    if high_nibble == "1":
-        return FootRollerDecode(state="on", raw=high_nibble)
-    return FootRollerDecode(state="off", raw=high_nibble)
+    enabled_bit = (int(byte_7, 16) & 0x80) >> 7
+    if enabled_bit:
+        return FootRollerDecode(state="on", raw=str(enabled_bit))
+    return FootRollerDecode(state="off", raw=str(enabled_bit))
 
 
 def decode_massage_speed(data: str) -> MassageSpeedDecode:

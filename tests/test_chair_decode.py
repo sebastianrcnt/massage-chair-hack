@@ -162,14 +162,14 @@ def test_decode_packed_timer_rejects_missing_or_unknown_segments() -> None:
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        ("235BF0D70B061180E0", FootRollerDecode(state="on", raw="1")),
-        ("235BF0D70B068180E0", FootRollerDecode(state="off", raw="8")),
+        ("235BF0D70B068180E0", FootRollerDecode(state="on", raw="1")),
+        ("235BF0D70B067180E0", FootRollerDecode(state="off", raw="0")),
         ("235BF0D70B060180E0", FootRollerDecode(state="off", raw="0")),
         ("235BF0D70B06", FootRollerDecode(state="unknown", raw="-")),
         ("235BF0D70B06G180E0", FootRollerDecode(state="unknown", raw="G1")),
     ],
 )
-def test_decode_foot_roller_uses_seventh_byte_high_nibble(
+def test_decode_foot_roller_uses_b6_bit_7(
     data: str, expected: FootRollerDecode
 ) -> None:
     assert decode_foot_roller(data) == expected
@@ -267,7 +267,7 @@ def test_long_known_bit_masks_include_decoded_fields() -> None:
         0x0F,
         0x70,
         0x30,
-        0xF3,
+        0x83,
         0x00,
         0x02,
     ]
@@ -282,7 +282,7 @@ def test_unknown_bit_strings_masks_known_bits() -> None:
         "1101....",
         "0...1011",
         "00..0110",
-        "....00..",
+        ".00000..",
         "10000000",
         "111000.0",
     ]

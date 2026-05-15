@@ -294,7 +294,7 @@ class DecodedPanel(Static):
             content.append("off", style="bold yellow")
         else:
             content.append("unknown", style="yellow")
-        content.append(f"  B6[b7:b4]={foot_roller.raw}", style="dim")
+        content.append(f"  B6[b7]={foot_roller.raw}", style="dim")
 
         content.append("\nHeater?: ", style="bold cyan")
         if heater.state == "on":

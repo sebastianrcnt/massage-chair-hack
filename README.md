@@ -2,6 +2,10 @@
 
 ESP32 chair BLE bridge/sniffer firmware built with Arduino on PlatformIO.
 
+The production firmware is `src/main.cpp`. An experimental MicroPython port lives in
+[`firmware/micropython`](firmware/micropython); it keeps the same BLE text protocol but
+does not implement BLE pairing/passkey security yet.
+
 ## Requirements
 
 - uv

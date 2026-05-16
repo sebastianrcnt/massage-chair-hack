@@ -46,7 +46,7 @@ _ADV_TYPE_NAME = const(0x09)
 _ADV_TYPE_UUID128_COMPLETE = const(0x07)
 
 
-def advertising_payload(name, services):
+def advertising_payload(name):
     payload = bytearray()
 
     def append(adv_type, value):
@@ -55,8 +55,6 @@ def advertising_payload(name, services):
 
     append(_ADV_TYPE_FLAGS, b"\x06")
     append(_ADV_TYPE_NAME, name.encode())
-    for uuid in services:
-        append(_ADV_TYPE_UUID128_COMPLETE, bytes(uuid))
     return payload
 
 
@@ -109,11 +107,10 @@ class ChairBleBridge:
             parity=None,
             stop=1,
             rx=Pin(RXD_CMD),
-            tx=None,
         )
 
     def _advertise(self):
-        payload = advertising_payload(DEVICE_NAME, [SERVICE_UUID])
+        payload = advertising_payload(DEVICE_NAME)
         self.ble.gap_advertise(100_000, adv_data=payload)
 
     def _on_ble_irq(self, event, data):

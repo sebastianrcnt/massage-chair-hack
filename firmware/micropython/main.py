@@ -14,8 +14,16 @@ src/chair_monitor.py:
 from micropython import const
 from machine import Pin, UART
 import bluetooth
-import struct
 import time
+
+from bridge_core import (
+    BLE_COMMAND_ERROR,
+    BLE_COMMAND_IGNORE,
+    BLE_COMMAND_SEND,
+    FrameBuffer,
+    advertising_payload,
+    parse_ble_write,
+)
 
 
 # Pin configuration.
@@ -26,7 +34,6 @@ TXD_CMD = const(14)  # White wire TX: ESP32 -> chair command injection.
 LED_PIN = const(2)
 
 BAUD_RATE = const(9600)
-MAX_FRAME_LEN = const(96)
 
 DEVICE_NAME = "ChairSniffer"
 SERVICE_UUID = bluetooth.UUID("12345678-1234-1234-1234-123456789abc")
@@ -40,28 +47,6 @@ _IRQ_GATTS_WRITE = const(3)
 _FLAG_READ = const(0x0002)
 _FLAG_WRITE = const(0x0008)
 _FLAG_NOTIFY = const(0x0010)
-
-_ADV_TYPE_FLAGS = const(0x01)
-_ADV_TYPE_NAME = const(0x09)
-_ADV_TYPE_UUID128_COMPLETE = const(0x07)
-
-
-def advertising_payload(name):
-    payload = bytearray()
-
-    def append(adv_type, value):
-        payload.extend(struct.pack("BB", len(value) + 1, adv_type))
-        payload.extend(value)
-
-    append(_ADV_TYPE_FLAGS, b"\x06")
-    append(_ADV_TYPE_NAME, name.encode())
-    return payload
-
-
-def is_hex_command(value):
-    if len(value) != 4:
-        return False
-    return all(char in "0123456789ABCDEFabcdef" for char in value)
 
 
 class ChairBleBridge:
@@ -78,8 +63,8 @@ class ChairBleBridge:
         )
         self.command_uart = self._open_command_rx()
 
-        self.status_line = bytearray()
-        self.command_line = bytearray()
+        self.status_frames = FrameBuffer(b"[Y] ")
+        self.command_frames = FrameBuffer(b"[W] ")
         self.connections = set()
 
         self.ble = bluetooth.BLE()
@@ -129,24 +114,15 @@ class ChairBleBridge:
                 self._handle_ble_write(self.ble.gatts_read(value_handle))
 
     def _handle_ble_write(self, value):
-        try:
-            command = value.decode().strip()
-        except UnicodeError:
-            self.ble_send("[ERR] Command must be UTF-8 text")
+        action, payload = parse_ble_write(value)
+        if action == BLE_COMMAND_IGNORE:
             return
-
-        if not command:
+        if action == BLE_COMMAND_ERROR:
+            self.ble_send(payload)
             return
-
-        print("BLE received: {}".format(command))
-        if command.startswith("PIN:"):
-            self.ble_send("[ERR] PIN is not supported by MicroPython firmware")
-            return
-        if not is_hex_command(command):
-            self.ble_send("[ERR] Invalid command. Use 4 hex digits")
-            return
-
-        self.send_to_chair(command.upper())
+        if action == BLE_COMMAND_SEND:
+            print("BLE received: {}".format(payload))
+            self.send_to_chair(payload)
 
     def ble_send(self, message):
         data = message.encode()
@@ -177,40 +153,26 @@ class ChairBleBridge:
         self.command_uart = self._open_command_rx()
         self.ble_send("[SENT] " + command)
 
-    def _send_line(self, line):
-        if not line:
-            return
+    def _send_line(self, message):
         self.led.on()
-        try:
-            message = line.decode()
-        except UnicodeError:
-            message = "".join(chr(value) if 32 <= value <= 126 else "?" for value in line)
         self.ble_send(message)
         self.led.off()
 
-    def _append_frame_byte(self, line, prefix, value):
-        if value == ord("~"):
-            self._send_line(line)
-            line[:] = prefix
-            return
-        if value == ord("\r"):
-            self._send_line(line)
-            line.clear()
-            return
-        if len(line) < MAX_FRAME_LEN:
-            line.append(value)
-        else:
-            self.ble_send("[ERR] Dropped overlong frame")
-            line.clear()
+    def _emit_frame_messages(self, messages):
+        for message in messages:
+            if message.startswith("[ERR] "):
+                self.ble_send(message)
+            else:
+                self._send_line(message)
 
     def poll_uart(self):
         while self.status_uart.any():
             value = self.status_uart.read(1)[0]
-            self._append_frame_byte(self.status_line, b"[Y] ", value)
+            self._emit_frame_messages(self.status_frames.append(value))
 
         while self.command_uart.any():
             value = self.command_uart.read(1)[0]
-            self._append_frame_byte(self.command_line, b"[W] ", value)
+            self._emit_frame_messages(self.command_frames.append(value))
 
     def run(self):
         while True:

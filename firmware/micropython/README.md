@@ -23,6 +23,7 @@ Flash MicroPython to the ESP32, then copy `main.py` to the board.
 Example using `mpremote`:
 
 ```sh
+uv tool run mpremote connect /dev/cu.usbserial-0001 fs cp firmware/micropython/bridge_core.py :bridge_core.py
 uv tool run mpremote connect /dev/cu.usbserial-0001 fs cp firmware/micropython/main.py :main.py
 uv tool run mpremote connect /dev/cu.usbserial-0001 reset
 ```

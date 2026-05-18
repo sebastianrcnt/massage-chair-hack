@@ -77,15 +77,17 @@ the last byte so it can tolerate length changes.
 | `B2[b3:b0]` | Unknown flags | Varies across samples | Unknown |
 | `B3[b7:b4]` | Unknown flags | Varies across samples | Unknown |
 | `B3[b3:b0]` | Timer ones segment high nibble | Becomes `ones_segment[b7:b4]` | Confirmed |
-| `B4[b7]` | Manual: 지압 blink (when manual) | Default `1`; blinks `0`/`1` when 지압 is the active manual technique | Tentative |
-| `B4[b6:b5]` | Air strength | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative — overlaps with `B4[b6]` 주무름 blink in manual mode |
+| `B4[b7]` | Manual: 지압 blink | Default `1`; blinks `0`/`1` when 지압 is the active manual technique | Tentative |
+| `B4[b6]` | Manual: 주무름 blink / Air strength high bit | Manual mode: blinks `0`/`1` when 주무름 active. Otherwise: high bit of strength (with `B4[b5]`) | Tentative — mode-dependent |
+| `B4[b5]` | Air strength low bit | With `B4[b6]`: `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative |
 | `B4[b4]` | Air | `1` -> on, `0` -> off | Tentative |
 | `B4[b3:b0]` | Unknown flags | Not mapped | Unknown |
 | `B5[b7:b6]` | Unknown flags | Not mapped | Unknown |
 | `B5[b5:b4]` | Manual mode indicator | `00` -> chair is in manual mode | Tentative |
-| `B5[b3:b2]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative — overlaps with manual blink bits in manual mode |
-| `B5[b1]` | Manual: 두드림 blink (when manual) | Default `1`; blinks `0`/`1` when 두드림 is active | Tentative |
-| `B5[b0]` | Manual: 시아추 blink (when manual) | Default `1`; blinks `0`/`1` when 시아추 is active | Tentative |
+| `B5[b3]` | Manual: 복합 blink / Massage speed high bit | Manual mode: blinks `0`/`1` when 복합 active. Otherwise: high bit of speed (with `B5[b2]`) | Tentative — mode-dependent |
+| `B5[b2]` | Manual: 손날 두드림 blink / Massage speed low bit | Manual mode: blinks `0`/`1` when 손날 active. With `B5[b3]`: `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative — mode-dependent |
+| `B5[b1]` | Manual: 두드림 blink | Default `1`; blinks `0`/`1` when 두드림 active | Tentative |
+| `B5[b0]` | Manual: 시아추 blink | Default `1`; blinks `0`/`1` when 시아추 active | Tentative |
 | `B6[b7]` | Foot roller | `1` -> on, `0` -> off | Tentative |
 | `B6[b6]` | Leg raise movement | Blinks `0`/`1` about once per second while the leg rest is raising | Tentative |
 | `B6[b5]` | Leg recline movement | Blinks `0`/`1` about once per second while the leg rest is reclining | Tentative |
@@ -219,3 +221,9 @@ believed to belong to long status instead.
   against more captures.
 - Some bits in the timer sample bytes vary while the displayed timer stays the same; those
   bits are likely unrelated flags, but their meanings are unknown.
+- `B7` is consistently observed with `b7 == 1` (samples show `80`, `A0`, `60`) but the
+  function is still unmapped; could be an always-on flag rather than a true unknown.
+- Heater lives on the *last* byte of long status, not a fixed index. The decoder
+  uses `bytes.last`, which is length-tolerant. The dev "mask known bits" toggle in
+  `Dev/DecodedStatusScreen.swift` currently hard-codes index 8; if future captures
+  show a different long-status length, that mask needs to follow the last-byte rule.

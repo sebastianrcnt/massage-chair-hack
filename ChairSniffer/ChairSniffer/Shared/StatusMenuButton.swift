@@ -1,55 +1,21 @@
 import SwiftUI
 
-/// Top-right omni button: color-coded BLE status icon that opens a menu with
-/// connection actions and developer-tools entry.
+/// Status indicator + Developer Tools entry, all in one tap.
+/// Color-coded by BLE health; tapping opens DevToolsSheet (which itself has
+/// connection management inside).
 struct StatusMenuButton: View {
     @ObservedObject var ble: ChairBLEManager
-    let onScanRequest: () -> Void
-    let onDevTools: () -> Void
+    let onTap: () -> Void
 
     var body: some View {
-        Menu {
-            connectionItems
-            Section {
-                Button {
-                    onDevTools()
-                } label: {
-                    Label("Developer Tools", systemImage: "wrench.and.screwdriver")
-                }
-            }
-        } label: {
+        Button(action: onTap) {
             Image(systemName: iconName)
-                .font(.title3)
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(iconColor)
+                .frame(width: 32, height: 32)
                 .accessibilityLabel(accessibilityLabel)
         }
-    }
-
-    @ViewBuilder
-    private var connectionItems: some View {
-        if !ble.isBluetoothReady {
-            Section {
-                Label(ble.bluetoothStatusMessage, systemImage: "exclamationmark.circle")
-            }
-        } else if ble.isConnected {
-            Section(ble.connectionState) {
-                Button(role: .destructive) {
-                    ble.disconnect()
-                } label: {
-                    Label("연결 해제", systemImage: "xmark.circle")
-                }
-            }
-        } else {
-            Section {
-                Button {
-                    onScanRequest()
-                } label: {
-                    Label(ble.isScanning ? "스캔 중…" : "기기 검색",
-                          systemImage: "dot.radiowaves.left.and.right")
-                }
-                .disabled(ble.isScanning)
-            }
-        }
+        .buttonStyle(.glass)
     }
 
     private var iconName: String {
@@ -65,8 +31,8 @@ struct StatusMenuButton: View {
     }
 
     private var accessibilityLabel: String {
-        if !ble.isBluetoothReady { return "Bluetooth unavailable" }
-        if ble.isConnected       { return "Connected" }
-        return "Disconnected"
+        if !ble.isBluetoothReady { return "Bluetooth unavailable. Open developer tools." }
+        if ble.isConnected       { return "Connected. Open developer tools." }
+        return "Disconnected. Open developer tools."
     }
 }

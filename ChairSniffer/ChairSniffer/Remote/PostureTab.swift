@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PostureTab: View {
     @ObservedObject var ble: ChairBLEManager
+    let onStatusTap: () -> Void
 
     private let backRaise   = ControlItem(code: "0302", label: "세우기", icon: "chevron.up")
     private let backRecline = ControlItem(code: "0304", label: "눕히기", icon: "chevron.down")
@@ -13,14 +14,18 @@ struct PostureTab: View {
 
     var body: some View {
         ScrollView {
-            GlassEffectContainer(spacing: 12) {
-                VStack(spacing: 24) {
-                    postureSection
-                    presetSection
+            VStack(spacing: 24) {
+                TabHeader(title: "자세", ble: ble, onStatusTap: onStatusTap)
+                GlassEffectContainer(spacing: 12) {
+                    VStack(spacing: 24) {
+                        postureSection
+                        presetSection
+                    }
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
         }
         .background(Color(.systemGroupedBackground))
     }

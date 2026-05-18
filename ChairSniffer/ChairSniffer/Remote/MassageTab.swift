@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MassageTab: View {
     @ObservedObject var ble: ChairBLEManager
+    let onStatusTap: () -> Void
 
     private let speed      = ControlItem(code: "0327", label: "속도",   icon: "speedometer")
     private let width      = ControlItem(code: "0364", label: "폭",     icon: "arrow.left.and.right")
@@ -16,15 +17,19 @@ struct MassageTab: View {
 
     var body: some View {
         ScrollView {
-            GlassEffectContainer(spacing: 12) {
-                VStack(spacing: 24) {
-                    intensitySection
-                    airSection
-                    manualSection
+            VStack(spacing: 24) {
+                TabHeader(title: "마사지", ble: ble, onStatusTap: onStatusTap)
+                GlassEffectContainer(spacing: 12) {
+                    VStack(spacing: 24) {
+                        intensitySection
+                        airSection
+                        manualSection
+                    }
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
         }
         .background(Color(.systemGroupedBackground))
     }

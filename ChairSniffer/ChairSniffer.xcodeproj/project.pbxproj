@@ -10,6 +10,7 @@
 		10262836AC9927D0C070B39C /* ChairSnifferApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2EA5B97B3CE131165EBF6D /* ChairSnifferApp.swift */; };
 		17A263C34DA235956FE43729 /* SystemLogScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC13D873E01BB6861F86A4C /* SystemLogScreen.swift */; };
 		1A749340C36288DADB7B47BE /* StatusMenuButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E06D254E8CFBF4CEDB1B50D9 /* StatusMenuButton.swift */; };
+		2098A77609554A03FD566638 /* TabHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C4F887E0E6F23B44CA8D75F /* TabHeader.swift */; };
 		2C31D721A48E4EEAE6E9F2EA /* CustomHexScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B3D6992BCA340221544FDBE /* CustomHexScreen.swift */; };
 		2D83FA21755FED36D64C5B65 /* ViewStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2666168918D88AB8B959CD /* ViewStyles.swift */; };
 		3902A3523494C9C3AACF5E31 /* PostureTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38AB7249A001BAEB49C7DACB /* PostureTab.swift */; };
@@ -37,6 +38,7 @@
 		0D5194DF634718D593C29C90 /* ControlButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlButton.swift; sourceTree = "<group>"; };
 		29B1F66EBB3A48B3D1C1B9ED /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2BE7F8D17F2559AFAD347412 /* MassageTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MassageTab.swift; sourceTree = "<group>"; };
+		2C4F887E0E6F23B44CA8D75F /* TabHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabHeader.swift; sourceTree = "<group>"; };
 		30236C6CDB67563E78146000 /* DecodedStatusScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodedStatusScreen.swift; sourceTree = "<group>"; };
 		342B94D309B5226E34BDB84D /* DevToolsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevToolsSheet.swift; sourceTree = "<group>"; };
 		38AB7249A001BAEB49C7DACB /* PostureTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostureTab.swift; sourceTree = "<group>"; };
@@ -73,6 +75,7 @@
 			isa = PBXGroup;
 			children = (
 				0D5194DF634718D593C29C90 /* ControlButton.swift */,
+				2C4F887E0E6F23B44CA8D75F /* TabHeader.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -240,6 +243,7 @@
 				AB20F5FFE5CFFB82E0593FB5 /* RawFeedScreen.swift in Sources */,
 				1A749340C36288DADB7B47BE /* StatusMenuButton.swift in Sources */,
 				17A263C34DA235956FE43729 /* SystemLogScreen.swift in Sources */,
+				2098A77609554A03FD566638 /* TabHeader.swift in Sources */,
 				2D83FA21755FED36D64C5B65 /* ViewStyles.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

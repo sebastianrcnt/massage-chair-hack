@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeTab: View {
     @ObservedObject var ble: ChairBLEManager
+    let onStatusTap: () -> Void
 
     private let power = ControlItem(code: "0303", label: "전원",     icon: "power",     prominence: .primary)
     private let pause = ControlItem(code: "0322", label: "일시정지", icon: "playpause", prominence: .primary)
@@ -18,15 +19,19 @@ struct HomeTab: View {
 
     var body: some View {
         ScrollView {
-            GlassEffectContainer(spacing: 12) {
-                VStack(spacing: 24) {
-                    primaryRow
-                    timerRow
-                    autoModeSection
+            VStack(spacing: 24) {
+                TabHeader(title: "홈", ble: ble, onStatusTap: onStatusTap)
+                GlassEffectContainer(spacing: 12) {
+                    VStack(spacing: 24) {
+                        primaryRow
+                        timerRow
+                        autoModeSection
+                    }
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 14)
         }
         .background(Color(.systemGroupedBackground))
     }

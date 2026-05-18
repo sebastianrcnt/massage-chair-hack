@@ -238,8 +238,8 @@ These samples should be kept aligned with the Swift decoder.
 
 ## Short Status Map
 
-Short status frames are displayed and diffed by the TUI. Some captures are 3 bytes, but
-newer observations include at least 5 bytes.
+Short status frames are displayed and diffed by the iOS debug status screen. Some
+captures are 3 bytes, but newer observations include at least 5 bytes.
 
 | Range | Name | Values / rule | Confidence |
 | --- | --- | --- | --- |

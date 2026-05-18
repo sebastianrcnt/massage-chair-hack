@@ -108,12 +108,21 @@ uv run pytest
 
 ## Reverse Engineering Notes
 
-- Known remote button codes: [docs/decoding.md](docs/decoding.md)
-- Raw samples and scratch notes: [reverse.md](reverse.md)
+- Status maps, command codes, and decoding notes: [docs/decoding.md](docs/decoding.md)
+- The Swift app decoder is the implementation source of truth; keep `docs/decoding.md`
+  aligned with `ChairSniffer/ChairSniffer/Models/ChairDecode.swift`.
 
 ## iOS / macOS App
 
-Open `ChairSniffer/ChairSniffer.xcodeproj` in Xcode, select your device or **My Mac (Mac Catalyst)**, press `Cmd+R`.
+Generate the Xcode project, then open it:
+
+```sh
+cd ChairSniffer
+xcodegen generate
+open ChairSniffer.xcodeproj
+```
+
+Select your device or **My Mac (Mac Catalyst)**, then press `Cmd+R`.
 Scans for any BLE device whose name starts with `ChairSniffer`.
 
 Features: decoded status panel, hex keypad for sending commands, raw BLE feed with pause, display mode toggle (HEX / BIN / OCT) with diff highlighting for changed bytes.

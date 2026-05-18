@@ -1,151 +1,115 @@
 # Chair
 
-ESP32 chair BLE bridge/sniffer firmware built with Arduino on PlatformIO.
-
-The production firmware is `src/main.cpp`. An experimental MicroPython port lives in
-[`firmware/micropython`](firmware/micropython); it keeps the same BLE text protocol but
-does not implement BLE pairing/passkey security yet.
+ESP32 BLE sniffer/bridge for a massage chair, running MicroPython firmware.
 
 ## Requirements
 
-- uv
-- ESP32 Dev Module compatible board
-
-Install project dependencies:
+- Python 3.11+ with [uv](https://docs.astral.sh/uv/)
+- [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html) for initial USB flash
 
 ```sh
 uv sync
+pip install mpremote   # or: brew install mpremote
 ```
 
-PlatformIO is provided by the uv environment. Run it as `uv run pio`.
-Common project commands are wrapped by `make`.
+## Initial Firmware Setup (USB, one time)
 
-## Build
-
-Compile the firmware:
+Connect the ESP32 over USB, then copy the firmware files:
 
 ```sh
-make build
+mpremote cp firmware/micropython/bridge_core.py :bridge_core.py
+mpremote cp firmware/micropython/main.py :main.py
+mpremote reset
 ```
 
-## Deploy
-
-Connect the ESP32 over USB, then list available serial devices:
+Check boot logs:
 
 ```sh
-make devices
+mpremote connect auto repl
 ```
 
-Upload the firmware:
+Expected output:
+
+```
+BLE ready: ChairSniffer-AFEF
+MicroPython firmware is experimental and uses no BLE passkey
+```
+
+## OTA Firmware Update (BLE, no USB needed)
+
+After the initial USB setup, use `chair_ota.py` for all future updates:
 
 ```sh
-make upload
+# Upload a single file
+uv run src/chair_ota.py firmware/micropython/main.py
+
+# Upload multiple files and reboot when done
+uv run src/chair_ota.py --reboot firmware/micropython/bridge_core.py firmware/micropython/main.py
+
+# Specify device name if needed
+uv run src/chair_ota.py --name ChairSniffer-AFEF --reboot firmware/micropython/main.py
 ```
 
-If PlatformIO does not auto-detect the port, pass it explicitly:
+The script connects over BLE, uploads in 100-byte chunks with CRC32 verification, and
+optionally reboots the device. The device continues sniffing chair data during the upload.
+
+OTA protocol (app → device):
+```
+OTA BEGIN <filename> <size>   start transfer
+OTA DATA <hex_chunk>          send chunk (100 bytes → 200 hex chars)
+OTA COMMIT <crc32>            verify and write file
+OTA REBOOT                    reboot device
+```
+
+## BLE Monitor TUI
 
 ```sh
-uv run pio run --target upload --upload-port /dev/cu.usbserial-0001
+uv run src/chair_monitor.py
+uv run src/chair_monitor.py --name ChairSniffer-AFEF
+uv run src/chair_monitor.py --debug
 ```
 
-After upload, open the serial monitor:
+Keybindings:
+
+| Key | Action |
+|-----|--------|
+| `F2` | Cycle display: binary → octal → hex |
+| `Space` | Toggle status panel: unknown flags ↔ full raw |
+| `P` | Pause / resume incoming display updates |
+| `Ctrl+Q` | Quit |
+
+Enter 4-digit hex commands in the input bar (e.g. `0303` for power).
+
+## BLE Protocol
+
+**Device → app (notify):**
+
+| Prefix | Source |
+|--------|--------|
+| `[CHAIR] <hex>` | Chair status line (yellow wire) |
+| `[REMOTE] <hex>` | Remote command line (white wire, sniffed) |
+| `[TRANSMITTED] <hex>` | Command sent by this app to the chair |
+| `[ERROR] <text>` | Error from bridge firmware |
+
+**App → device (write):**
+
+| Command | Effect |
+|---------|--------|
+| `SEND XXXX` | Send 4-digit hex command to chair |
+| `OTA BEGIN/DATA/COMMIT/REBOOT` | Firmware update (see above) |
+
+## Tests
 
 ```sh
-make monitor
+uv run pytest
 ```
 
-Expected boot logs include:
+## Reverse Engineering Notes
 
-```text
-Loaded PIN: 000000
-BLE ready: ChairSniffer
-```
+- Known remote button codes: [docs/decoding.md](docs/decoding.md)
+- Raw samples and scratch notes: [reverse.md](reverse.md)
 
-The device advertises over BLE as `ChairSniffer`.
+## iOS App
 
-On first BLE pairing, enter the 6-digit passkey shown by the firmware. The default is
-`000000`. After connecting with the monitor app, change it with a command such as
-`PIN:123456`.
-
-## Common Commands
-
-```sh
-make build                 # build firmware
-make upload                # upload firmware
-make monitor               # serial monitor at 115200 baud
-make devices               # list serial devices
-make clean                 # clean build artifacts
-make compiledb             # generate compile_commands.json for clangd
-make monitor-app           # run BLE TUI
-make monitor-app-debug     # run BLE TUI with diagnostics
-make check-python          # syntax-check Python monitor
-make test                  # run Python unit tests
-```
-
-The BLE TUI displays unknown status bits by default. Press `Space` to toggle the status
-panel between unknown-only and full raw display. Press `F2` to cycle byte display between
-binary, octal, and hex. Press `P` to pause or resume incoming display updates. Commands
-are still entered as 4-digit hex codes.
-
-The TUI shows `Chair Status` and `Decoded` side by side. The `Decoded` panel shows
-long-status fields, including the packed 7-segment timer from `B1..B3`, air state,
-massage speed, massage width, foot roller, and heater.
-
-Known long/short status mappings are documented in [docs/decoding.md](docs/decoding.md).
-
-## Formatting
-
-Format C/C++ code with `clang-format`. The shared rules live in `.clang-format`.
-
-On macOS, Xcode may provide `clang-format` through `xcrun`:
-
-```sh
-xcrun clang-format -i src/main.cpp
-```
-
-If `clang-format` is not installed, install it with Homebrew:
-
-```sh
-brew install clang-format
-```
-
-Check formatting manually:
-
-```sh
-clang-format --dry-run --Werror src/main.cpp
-```
-
-Apply formatting:
-
-```sh
-clang-format -i src/main.cpp
-```
-
-## Editor Setup
-
-Editor-specific files are intentionally not committed. VS Code users can regenerate local
-IntelliSense settings with:
-
-```sh
-uv run pio project init --ide vscode
-```
-
-clangd users should generate a local compilation database:
-
-```sh
-make compiledb
-```
-
-The repository includes `.clangd` to remove ESP32 GCC flags that clangd cannot parse.
-VS Code clangd users also need to allow clangd to query the ESP32 cross compiler. Add this
-to local VS Code settings:
-
-```json
-{
-  "clangd.arguments": [
-    "--query-driver=/Users/*/.platformio/packages/toolchain-xtensa-esp32/bin/xtensa-esp32-elf-*,/home/*/.platformio/packages/toolchain-xtensa-esp32/bin/xtensa-esp32-elf-*"
-  ]
-}
-```
-
-Restart clangd after changing settings or generating `compile_commands.json`.
+Open `TodoApp/TodoApp.xcodeproj` in Xcode, select your device, press `Cmd+R`.
+Scans for any BLE device whose name starts with `ChairSniffer`.

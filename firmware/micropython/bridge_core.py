@@ -10,6 +10,10 @@ ADV_TYPE_UUID128_COMPLETE = 0x07
 BLE_COMMAND_IGNORE = "ignore"
 BLE_COMMAND_ERROR = "error"
 BLE_COMMAND_SEND = "send"
+BLE_OTA_BEGIN = "ota_begin"
+BLE_OTA_DATA = "ota_data"
+BLE_OTA_COMMIT = "ota_commit"
+BLE_OTA_REBOOT = "ota_reboot"
 
 FRAME_OVERLONG_ERROR = "[ERROR] Dropped overlong frame"
 
@@ -70,7 +74,21 @@ def parse_ble_write(value):
             return BLE_COMMAND_ERROR, "[ERROR] SEND requires 4 hex digits"
         return BLE_COMMAND_SEND, arg.upper()
 
-    return BLE_COMMAND_ERROR, "[ERROR] Unknown command. Supported: SEND XXXX"
+    if verb == "OTA":
+        parts2 = arg.split(None, 1)
+        subcmd = parts2[0].upper() if parts2 else ""
+        subarg = parts2[1] if len(parts2) > 1 else ""
+        if subcmd == "BEGIN":
+            return BLE_OTA_BEGIN, subarg
+        if subcmd == "DATA":
+            return BLE_OTA_DATA, subarg
+        if subcmd == "COMMIT":
+            return BLE_OTA_COMMIT, subarg
+        if subcmd == "REBOOT":
+            return BLE_OTA_REBOOT, ""
+        return BLE_COMMAND_ERROR, "[ERROR] Unknown OTA subcommand. Use: BEGIN DATA COMMIT REBOOT"
+
+    return BLE_COMMAND_ERROR, "[ERROR] Unknown command. Supported: SEND XXXX, OTA BEGIN/DATA/COMMIT/REBOOT"
 
 
 def decode_line(line):

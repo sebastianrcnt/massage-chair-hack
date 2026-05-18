@@ -12,14 +12,20 @@ src/chair_monitor.py:
 """
 
 from micropython import const
-from machine import Pin, UART
+from machine import Pin, UART, reset
+import binascii
 import bluetooth
+import os
 import time
 
 from bridge_core import (
     BLE_COMMAND_ERROR,
     BLE_COMMAND_IGNORE,
     BLE_COMMAND_SEND,
+    BLE_OTA_BEGIN,
+    BLE_OTA_DATA,
+    BLE_OTA_COMMIT,
+    BLE_OTA_REBOOT,
     FrameBuffer,
     advertising_payload,
     parse_ble_write,
@@ -73,6 +79,12 @@ class ChairBleBridge:
         self.connections = set()
         # Hand send_to_chair off to main loop; don't deinit/reinit UART in BLE IRQ.
         self.pending_command = None
+        self.pending_ota = None
+        self.ota_active = False
+        self.ota_filename = None
+        self.ota_size = 0
+        self.ota_received = 0
+        self.ota_file = None
 
         self.ble = bluetooth.BLE()
         self.ble.active(True)
@@ -138,6 +150,11 @@ class ChairBleBridge:
                 self.pending_command = payload
             else:
                 self.ble_send("[ERROR] Busy; previous command pending")
+        elif action in (BLE_OTA_BEGIN, BLE_OTA_DATA, BLE_OTA_COMMIT, BLE_OTA_REBOOT):
+            if self.pending_ota is None:
+                self.pending_ota = (action, payload)
+            else:
+                self.ble_send("[ERROR] OTA busy; wait for ACK")
 
     def ble_send(self, message):
         data = message.encode()
@@ -201,10 +218,97 @@ class ChairBleBridge:
         print("BLE received: {}".format(command))
         self.send_to_chair(command)
 
+    def _process_pending_ota(self):
+        item = self.pending_ota
+        if item is None:
+            return
+        self.pending_ota = None
+        action, payload = item
+        if action == BLE_OTA_BEGIN:
+            self._ota_begin(payload)
+        elif action == BLE_OTA_DATA:
+            self._ota_data(payload)
+        elif action == BLE_OTA_COMMIT:
+            self._ota_commit(payload)
+        elif action == BLE_OTA_REBOOT:
+            time.sleep_ms(200)
+            reset()
+
+    def _ota_begin(self, payload):
+        parts = payload.split()
+        if len(parts) != 2:
+            self.ble_send("[ERROR] OTA BEGIN requires: filename size")
+            return
+        filename, size_str = parts[0], parts[1]
+        if not filename.endswith(".py") or "/" in filename or ".." in filename:
+            self.ble_send("[ERROR] OTA filename must be a .py file with no path")
+            return
+        try:
+            size = int(size_str)
+        except ValueError:
+            self.ble_send("[ERROR] OTA BEGIN invalid size")
+            return
+        if self.ota_file is not None:
+            try:
+                self.ota_file.close()
+            except Exception:
+                pass
+        self.ota_filename = filename
+        self.ota_size = size
+        self.ota_received = 0
+        self.ota_file = open(filename + ".tmp", "wb")
+        self.ota_active = True
+        print("OTA begin: {} ({} bytes)".format(filename, size))
+        self.ble_send("[CHAIR] OTA READY")
+
+    def _ota_data(self, hex_chunk):
+        if not self.ota_active or self.ota_file is None:
+            self.ble_send("[ERROR] OTA not started")
+            return
+        try:
+            data = bytes.fromhex(hex_chunk)
+        except ValueError:
+            self.ble_send("[ERROR] OTA DATA invalid hex")
+            return
+        self.ota_file.write(data)
+        self.ota_received += len(data)
+        self.ble_send("[CHAIR] OTA ACK {}".format(self.ota_received))
+
+    def _ota_commit(self, expected_crc):
+        if not self.ota_active or self.ota_file is None:
+            self.ble_send("[ERROR] OTA not started")
+            return
+        self.ota_file.close()
+        self.ota_file = None
+        tmp = self.ota_filename + ".tmp"
+        try:
+            with open(tmp, "rb") as f:
+                content = f.read()
+            actual_crc = binascii.crc32(content) & 0xFFFFFFFF
+            if str(actual_crc) != expected_crc:
+                os.remove(tmp)
+                self.ble_send("[ERROR] OTA checksum mismatch: got {} expected {}".format(actual_crc, expected_crc))
+                self.ota_active = False
+                return
+            if len(content) != self.ota_size:
+                os.remove(tmp)
+                self.ble_send("[ERROR] OTA size mismatch: got {} expected {}".format(len(content), self.ota_size))
+                self.ota_active = False
+                return
+            os.rename(tmp, self.ota_filename)
+        except Exception as e:
+            self.ble_send("[ERROR] OTA commit failed: {}".format(e))
+            self.ota_active = False
+            return
+        self.ota_active = False
+        print("OTA done: {}".format(self.ota_filename))
+        self.ble_send("[CHAIR] OTA DONE {}".format(self.ota_filename))
+
     def run(self):
         while True:
             self.poll_uart()
             self._process_pending()
+            self._process_pending_ota()
             time.sleep_ms(2)
 
 

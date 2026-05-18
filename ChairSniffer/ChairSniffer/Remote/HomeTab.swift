@@ -82,6 +82,8 @@ struct HomeTab: View {
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(ble.autoTimerExtendEnabled ? Color.chairControlTextOnTint : Color.primary)
                 .frame(maxWidth: .infinity, minHeight: 76)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 8)
         }
         .glassEffect(timerExtendGlass, in: .rect(cornerRadius: 18))
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))

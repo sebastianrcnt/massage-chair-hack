@@ -35,7 +35,7 @@ struct StatusMenuButton: View {
     private var iconColor: Color {
         if !ble.isBluetoothReady { return .red }
         if ble.isConnected       { return .green }
-        return .secondary
+        return .orange
     }
 
     private var accessibilityLabel: String {

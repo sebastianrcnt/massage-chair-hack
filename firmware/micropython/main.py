@@ -1,14 +1,19 @@
 """
 Experimental MicroPython firmware for the ESP32 chair BLE bridge.
 
-This is a first-pass port of src/main.cpp. It intentionally does not implement
-BLE pairing/passkey security yet. Keep the BLE text protocol compatible with
-src/chair_monitor.py:
+BLE text protocol (notify):
 
-    [Y] <hex>      chair -> remote status line
-    [W] <hex>      remote -> chair command line
-    [SENT] <hex>   command sent by this bridge
-    [ERR] <text>   command validation error
+    [CHAIR] <hex>         chair -> remote status / ACK
+    [REMOTE] <hex>        remote -> chair command (sniffed)
+    [TRANSMITTED] <hex>   command sent by this bridge
+    [ERROR] <text>        validation / runtime error
+
+BLE writes (verbs):
+
+    SEND XXXX                       send a 4-digit hex chair command
+    OTA BEGIN/DATA/COMMIT/REBOOT    firmware update
+
+BLE pairing/passkey security is intentionally not implemented yet.
 """
 
 from micropython import const

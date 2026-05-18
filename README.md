@@ -82,26 +82,6 @@ OTA COMMIT <crc32>            verify and write file
 OTA REBOOT                    reboot device
 ```
 
-## BLE Monitor TUI
-
-```sh
-uv run src/chair_monitor.py --name ChairSniffer-AFEF
-uv run src/chair_monitor.py --name ChairSniffer-AFEF --debug
-```
-
-Or: `make monitor`
-
-Keybindings:
-
-| Key | Action |
-|-----|--------|
-| `F2` | Cycle display: binary → octal → hex |
-| `Space` | Toggle status panel: unknown flags ↔ full raw |
-| `P` | Pause / resume incoming display updates |
-| `Ctrl+Q` | Quit |
-
-Enter 4-digit hex commands in the input bar (e.g. `0303` for power).
-
 ## BLE Protocol
 
 **Device → app (notify):**

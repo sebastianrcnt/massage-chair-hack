@@ -33,28 +33,28 @@ def test_parse_ble_write_ignores_blank_commands() -> None:
     assert parse_ble_write(b" \r\n") == (BLE_COMMAND_IGNORE, "")
 
 
-def test_parse_ble_write_normalizes_valid_commands() -> None:
-    assert parse_ble_write(b" 03ab\n") == (BLE_COMMAND_SEND, "03AB")
+def test_parse_ble_write_normalizes_valid_send_commands() -> None:
+    assert parse_ble_write(b" SEND 03ab\n") == (BLE_COMMAND_SEND, "03AB")
 
 
 def test_parse_ble_write_rejects_invalid_utf8() -> None:
     assert parse_ble_write(b"\xff") == (
         BLE_COMMAND_ERROR,
-        "[ERR] Command must be UTF-8 text",
+        "[ERROR] Command must be UTF-8 text",
     )
 
 
-def test_parse_ble_write_rejects_pin_commands() -> None:
-    assert parse_ble_write(b"PIN:123456") == (
+def test_parse_ble_write_rejects_unknown_verbs() -> None:
+    assert parse_ble_write(b"PIN 123456") == (
         BLE_COMMAND_ERROR,
-        "[ERR] PIN is not supported by MicroPython firmware",
+        "[ERROR] Unknown command. Supported: SEND XXXX, OTA BEGIN/DATA/COMMIT/REBOOT",
     )
 
 
-def test_parse_ble_write_rejects_non_hex_commands() -> None:
-    assert parse_ble_write(b"zzzz") == (
+def test_parse_ble_write_rejects_non_hex_send_payload() -> None:
+    assert parse_ble_write(b"SEND zzzz") == (
         BLE_COMMAND_ERROR,
-        "[ERR] Invalid command. Use 4 hex digits",
+        "[ERROR] SEND requires 4 hex digits",
     )
 
 

@@ -1,4 +1,4 @@
-.PHONY: flash upload repl ota monitor test
+.PHONY: flash upload repl ota test
 
 PORT     ?= /dev/cu.usbserial-1110
 BLE_NAME ?= ChairSniffer-AFEF
@@ -20,9 +20,6 @@ repl:
 
 ota:
 	uv run src/chair_ota.py --name $(BLE_NAME) --reboot $(PY_FILES)
-
-monitor:
-	uv run src/chair_monitor.py --name $(BLE_NAME)
 
 test:
 	uv run pytest

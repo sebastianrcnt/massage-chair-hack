@@ -554,35 +554,41 @@ private struct RawFeedContent: View {
 
             Divider()
 
-            ScrollViewReader { proxy in
-                ScrollView([.vertical, .horizontal]) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(displayedText.isEmpty ? "Waiting for BLE notifications…" : displayedText)
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(.primary)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 12)
-                        Color.clear.frame(height: 1).id("terminal-end")
+            GeometryReader { geo in
+                ScrollViewReader { proxy in
+                    ScrollView([.vertical, .horizontal]) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(displayedText.isEmpty ? "Waiting for BLE notifications…" : displayedText)
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: true, vertical: false)
+                            Color.clear.frame(width: 1, height: 1).id("terminal-end")
+                        }
+                        .padding(14)
+                        .frame(
+                            minWidth: geo.size.width,
+                            minHeight: geo.size.height,
+                            alignment: .topLeading
+                        )
                     }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(Color(.systemBackground))
-                .overlay(alignment: .topTrailing) {
-                    if isPaused {
-                        Text("PAUSED")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(.orange, in: RoundedRectangle(cornerRadius: 4))
-                            .padding(8)
+                    .background(Color(.systemBackground))
+                    .overlay(alignment: .topTrailing) {
+                        if isPaused {
+                            Text("PAUSED")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(.orange, in: RoundedRectangle(cornerRadius: 4))
+                                .padding(8)
+                        }
                     }
-                }
-                .onChange(of: ble.rawLogs.count) { _, _ in
-                    guard !isPaused else { return }
-                    proxy.scrollTo("terminal-end", anchor: .bottom)
+                    .onChange(of: ble.rawLogs.count) { _, _ in
+                        guard !isPaused else { return }
+                        proxy.scrollTo("terminal-end", anchor: .bottom)
+                    }
                 }
             }
         }
@@ -616,6 +622,7 @@ private struct SystemLogContent: View {
 private struct ConnectionPanel: View {
     @ObservedObject var ble: ChairBLEManager
     @State private var showDevicePicker = false
+    @State private var showDisconnectConfirm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -633,28 +640,43 @@ private struct ConnectionPanel: View {
                 Spacer()
             }
 
-            HStack {
-                Button {
-                    ble.scan()
-                    showDevicePicker = true
-                } label: {
-                    Label("Scan", systemImage: "dot.radiowaves.left.and.right")
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(ble.isConnected)
-
-                Button(role: .destructive) {
-                    ble.disconnect()
-                } label: {
-                    Label("Disconnect", systemImage: "xmark.circle")
-                }
-                .buttonStyle(.bordered)
-                .disabled(!ble.isConnected)
-            }
+            primaryButton
         }
         .panelStyle()
         .sheet(isPresented: $showDevicePicker) {
             DevicePickerSheet(ble: ble, isPresented: $showDevicePicker)
+        }
+        .confirmationDialog(
+            "Disconnect from chair?",
+            isPresented: $showDisconnectConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Disconnect", role: .destructive) { ble.disconnect() }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    @ViewBuilder
+    private var primaryButton: some View {
+        if ble.isConnected {
+            Button {
+                showDisconnectConfirm = true
+            } label: {
+                Label("Connected — tap to disconnect", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+        } else {
+            Button {
+                ble.scan()
+                showDevicePicker = true
+            } label: {
+                Label(ble.isScanning ? "Scanning…" : "Scan for devices",
+                      systemImage: "dot.radiowaves.left.and.right")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
         }
     }
 
@@ -861,7 +883,7 @@ private struct DiffRawLine: View {
     let mode: FrameDisplayMode
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -869,26 +891,88 @@ private struct DiffRawLine: View {
                 Text("Waiting…")
                     .font(.system(.footnote, design: .monospaced))
                     .foregroundStyle(.secondary)
+                    .padding(.top, 2)
             } else {
-                Text(attributedBytes)
-                    .font(.system(.footnote, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if mode == .binary {
+                            Text(byteHeader)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                            Text(bitHeader)
+                                .font(.system(.caption2, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                        }
+                        Text(attributedBytes)
+                            .font(.system(.footnote, design: .monospaced))
+                            .textSelection(.enabled)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                }
             }
         }
+    }
+
+    private var byteHeader: String {
+        let bytes = ChairDecode.bytes(from: value)
+        return bytes.indices.map { idx in
+            "B\(idx + 1)".centered(in: mode.columnWidth)
+        }.joined(separator: " ")
+    }
+
+    private var bitHeader: String {
+        let bytes = ChairDecode.bytes(from: value)
+        return Array(repeating: "76543210", count: bytes.count).joined(separator: " ")
     }
 
     private var attributedBytes: AttributedString {
         let curBytes  = ChairDecode.bytes(from: value)
         let prevBytes = ChairDecode.bytes(from: previous)
         var result = AttributedString()
+        let canDiff = !previous.isEmpty
+
         for (i, byte) in curBytes.enumerated() {
-            let changed = !previous.isEmpty && (i >= prevBytes.count || byte != prevBytes[i])
-            var part = AttributedString(mode.format(byte) + (i < curBytes.count - 1 ? " " : ""))
-            if changed { part.foregroundColor = .orange }
-            result.append(part)
+            let prev = i < prevBytes.count ? prevBytes[i] : ""
+            let separator = i < curBytes.count - 1 ? " " : ""
+
+            if mode == .binary && canDiff {
+                let curBits = Array(mode.format(byte))
+                let prevBits = prev.isEmpty ? [] : Array(mode.format(prev))
+                for (bitIdx, bit) in curBits.enumerated() {
+                    let changed = bitIdx >= prevBits.count || bit != prevBits[bitIdx]
+                    var part = AttributedString(String(bit))
+                    if changed { part.foregroundColor = .orange }
+                    result.append(part)
+                }
+                result.append(AttributedString(separator))
+            } else {
+                let changed = canDiff && (i >= prevBytes.count || byte != prev)
+                var part = AttributedString(mode.format(byte) + separator)
+                if changed { part.foregroundColor = .orange }
+                result.append(part)
+            }
         }
         return result
+    }
+}
+
+private extension FrameDisplayMode {
+    var columnWidth: Int {
+        switch self {
+        case .hex: return 2
+        case .binary: return 8
+        case .octal: return 3
+        }
+    }
+}
+
+private extension String {
+    func centered(in width: Int) -> String {
+        if count >= width { return String(prefix(width)) }
+        let pad = width - count
+        let left = pad / 2
+        let right = pad - left
+        return String(repeating: " ", count: left) + self + String(repeating: " ", count: right)
     }
 }
 

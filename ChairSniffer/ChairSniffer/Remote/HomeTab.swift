@@ -22,10 +22,10 @@ struct HomeTab: View {
             VStack(spacing: 24) {
                 TabHeader(title: "홈", ble: ble, onStatusTap: onStatusTap)
                 GlassEffectContainer(spacing: 12) {
-                    VStack(spacing: 24) {
+                    VStack(spacing: 14) {
                         primaryRow
                         timerRow
-                        autoModeSection
+                        autoModeRow
                     }
                 }
             }
@@ -47,15 +47,10 @@ struct HomeTab: View {
         button(timer, minHeight: 76)
     }
 
-    private var autoModeSection: some View {
-        ControlSection(title: "오토 모드") {
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                spacing: 12
-            ) {
-                ForEach(autoModes) { item in
-                    button(item, minHeight: 72)
-                }
+    private var autoModeRow: some View {
+        HStack(spacing: 8) {
+            ForEach(autoModes) { item in
+                button(item, minHeight: 54)
             }
         }
     }

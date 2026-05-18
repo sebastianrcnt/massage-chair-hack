@@ -29,12 +29,27 @@ struct StatusContent: View {
 
     @AppStorage("frameDisplayMode") private var displayMode = FrameDisplayMode.binary
     @State private var isFramesPaused = false
+    @State private var maskKnownBits = false
     @State private var prevShort = ""
     @State private var prevLong = ""
     @State private var frozenShort = ""
     @State private var frozenLong = ""
     @State private var frozenPrevShort = ""
     @State private var frozenPrevLong = ""
+
+    // 1 bit = decoded/known per docs/decoding.md
+    private static let longKnownMask: [UInt8] = [
+        0x00, // B0 unknown
+        0xFF, // B1 timer tens
+        0xF0, // B2 timer ones (high nibble)
+        0x0F, // B3 timer ones (low nibble)
+        0x70, // B4 air b4 + air strength b6:b5
+        0x0C, // B5 speed b3:b2
+        0xFF, // B6 foot roller, leg/back motion, width
+        0x00, // B7 unknown
+        0x02, // B8 (last) heater b1
+    ]
+    private static let shortKnownMask: [UInt8] = [0x00, 0x00, 0x00, 0x00, 0xFF]
 
     var body: some View {
         ScrollView {
@@ -110,6 +125,16 @@ struct StatusContent: View {
                 .tint(isFramesPaused ? .orange : .primary)
                 .accessibilityLabel(isFramesPaused ? "Resume latest frames" : "Pause latest frames")
 
+                if displayMode == .binary {
+                    Button { maskKnownBits.toggle() } label: {
+                        Image(systemName: maskKnownBits ? "eye.slash.fill" : "eye")
+                            .frame(width: 28, height: 28)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(maskKnownBits ? .chairTint : .primary)
+                    .accessibilityLabel(maskKnownBits ? "Show all bits" : "Mask decoded bits")
+                }
+
                 Picker("Display", selection: $displayMode) {
                     ForEach(FrameDisplayMode.allCases, id: \.self) {
                         Text($0.rawValue).tag($0)
@@ -119,8 +144,10 @@ struct StatusContent: View {
                 .fixedSize()
                 .accessibilityLabel("Byte display mode")
             }
-            DiffRawLine(title: "Short", value: shownShort, previous: shownPrevShort, mode: displayMode)
-            DiffRawLine(title: "Long", value: shownLong, previous: shownPrevLong, mode: displayMode)
+            DiffRawLine(title: "Short", value: shownShort, previous: shownPrevShort, mode: displayMode,
+                        knownMask: maskKnownBits ? Self.shortKnownMask : nil)
+            DiffRawLine(title: "Long",  value: shownLong,  previous: shownPrevLong,  mode: displayMode,
+                        knownMask: maskKnownBits ? Self.longKnownMask : nil)
         }
         .panelStyle()
     }
@@ -158,6 +185,7 @@ private struct DiffRawLine: View {
     let value: String
     let previous: String
     let mode: FrameDisplayMode
+    var knownMask: [UInt8]? = nil
 
     private let rawFont = Font.system(size: 12, design: .monospaced)
 
@@ -209,26 +237,43 @@ private struct DiffRawLine: View {
         let prevBytes = ChairDecode.bytes(from: previous)
         var result = AttributedString()
         let canDiff = !previous.isEmpty
+        let dotColor = Color(.tertiaryLabel)
 
         for (i, byte) in curBytes.enumerated() {
             let prev = i < prevBytes.count ? prevBytes[i] : ""
             let separator = i < curBytes.count - 1 ? " " : ""
+            let mask: UInt8 = (knownMask.flatMap { $0.indices.contains(i) ? $0[i] : nil }) ?? 0
 
-            if mode == .binary && canDiff {
+            if mode == .binary {
                 let curBits = Array(mode.format(byte))
                 let prevBits = prev.isEmpty ? [] : Array(mode.format(prev))
                 for (bitIdx, bit) in curBits.enumerated() {
-                    let changed = bitIdx >= prevBits.count || bit != prevBits[bitIdx]
-                    var part = AttributedString(String(bit))
-                    if changed { part.foregroundColor = .orange }
-                    result.append(part)
+                    let bitPosition = 7 - bitIdx
+                    let isMasked = (mask & (UInt8(1) << bitPosition)) != 0
+                    if isMasked {
+                        var part = AttributedString(".")
+                        part.foregroundColor = dotColor
+                        result.append(part)
+                    } else {
+                        let changed = canDiff && (bitIdx >= prevBits.count || bit != prevBits[bitIdx])
+                        var part = AttributedString(String(bit))
+                        if changed { part.foregroundColor = .orange }
+                        result.append(part)
+                    }
                 }
                 result.append(AttributedString(separator))
             } else {
-                let changed = canDiff && (i >= prevBytes.count || byte != prev)
-                var part = AttributedString(mode.format(byte) + separator)
-                if changed { part.foregroundColor = .orange }
-                result.append(part)
+                if mask == 0xFF {
+                    let dots = String(repeating: ".", count: mode.columnWidth)
+                    var part = AttributedString(dots + separator)
+                    part.foregroundColor = dotColor
+                    result.append(part)
+                } else {
+                    let changed = canDiff && (i >= prevBytes.count || byte != prev)
+                    var part = AttributedString(mode.format(byte) + separator)
+                    if changed { part.foregroundColor = .orange }
+                    result.append(part)
+                }
             }
         }
         return result

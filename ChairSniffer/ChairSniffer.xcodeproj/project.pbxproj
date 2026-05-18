@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		10262836AC9927D0C070B39C /* ChairSnifferApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2EA5B97B3CE131165EBF6D /* ChairSnifferApp.swift */; };
 		17A263C34DA235956FE43729 /* SystemLogScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC13D873E01BB6861F86A4C /* SystemLogScreen.swift */; };
+		1A749340C36288DADB7B47BE /* StatusMenuButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E06D254E8CFBF4CEDB1B50D9 /* StatusMenuButton.swift */; };
 		2C31D721A48E4EEAE6E9F2EA /* CustomHexScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B3D6992BCA340221544FDBE /* CustomHexScreen.swift */; };
 		2D83FA21755FED36D64C5B65 /* ViewStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2666168918D88AB8B959CD /* ViewStyles.swift */; };
 		3902A3523494C9C3AACF5E31 /* PostureTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38AB7249A001BAEB49C7DACB /* PostureTab.swift */; };
@@ -54,6 +55,7 @@
 		CC904DEEDADDB16EDF688436 /* ChairDecode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairDecode.swift; sourceTree = "<group>"; };
 		CED4EBD8C059C7C8899B468F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		D159F993AC7BC3B28B6B6CB2 /* HomeTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeTab.swift; sourceTree = "<group>"; };
+		E06D254E8CFBF4CEDB1B50D9 /* StatusMenuButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusMenuButton.swift; sourceTree = "<group>"; };
 		F3CA71DAD33CA1D15DF627CE /* CommandLogScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandLogScreen.swift; sourceTree = "<group>"; };
 		F9108EF561A92468415339BC /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -103,6 +105,7 @@
 				8FF4F4D9315570CC41356DCB /* ConnectionBanner.swift */,
 				4FC9649DEC8E0FFAA7FFA1CB /* DevicePickerSheet.swift */,
 				F9108EF561A92468415339BC /* Palette.swift */,
+				E06D254E8CFBF4CEDB1B50D9 /* StatusMenuButton.swift */,
 				CB2666168918D88AB8B959CD /* ViewStyles.swift */,
 			);
 			path = Shared;
@@ -235,6 +238,7 @@
 				F58F7B3623944DF57CC44A3A /* Palette.swift in Sources */,
 				3902A3523494C9C3AACF5E31 /* PostureTab.swift in Sources */,
 				AB20F5FFE5CFFB82E0593FB5 /* RawFeedScreen.swift in Sources */,
+				1A749340C36288DADB7B47BE /* StatusMenuButton.swift in Sources */,
 				17A263C34DA235956FE43729 /* SystemLogScreen.swift in Sources */,
 				2D83FA21755FED36D64C5B65 /* ViewStyles.swift in Sources */,
 			);

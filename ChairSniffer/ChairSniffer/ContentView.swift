@@ -34,30 +34,23 @@ struct ContentView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
-            ZStack(alignment: .top) {
-                content()
-                if !ble.isConnected {
-                    ConnectionBanner(ble: ble) {
-                        ble.scan()
-                        showDevicePicker = true
+            content()
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        StatusMenuButton(
+                            ble: ble,
+                            onScanRequest: {
+                                ble.scan()
+                                showDevicePicker = true
+                            },
+                            onDevTools: {
+                                showDevTools = true
+                            }
+                        )
                     }
                 }
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            showDevTools = true
-                        } label: {
-                            Label("Developer Tools", systemImage: "wrench.and.screwdriver")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
         }
         .tabItem { Label(label, systemImage: icon) }
     }

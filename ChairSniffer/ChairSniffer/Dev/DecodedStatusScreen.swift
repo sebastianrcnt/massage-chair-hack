@@ -38,15 +38,15 @@ struct StatusContent: View {
 
     // 1 bit = decoded/known per docs/decoding.md
     private static let longKnownMask: [UInt8] = [
-        0x00, // B0 unknown
+        0x07, // B0 b2:b0 roller position blink
         0xFF, // B1 timer tens
         0xF0, // B2 timer ones (high nibble)
         0xFF, // B3 b7 rolling + b6:b5 air strength / knead + b4 air + timer ones low nibble
         0x3F, // B4 b5:b4 manual indicator + b3:b0 manual technique blinks / speed
         0x00, // B5 unknown
         0xFF, // B6 foot roller, leg/back motion, width
-        0x00, // B7 unknown
-        0x02, // B8 (last) heater b1
+        0x63, // B7 b6/b5/b1/b0 air-area blinks
+        0xE2, // B8 b7:b5 roller position blink + heater b1
     ]
     private static let shortKnownMask: [UInt8] = [0x00, 0x00, 0x00, 0x00, 0xFF]
 

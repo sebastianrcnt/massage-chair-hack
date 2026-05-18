@@ -46,7 +46,7 @@ private struct PhoneLayout: View {
             .tabItem { Label("Status", systemImage: "gauge.with.dots.needle.bottom.50percent") }
 
             CommandsTab(ble: ble)
-                .tabItem { Label("Commands", systemImage: "arrow.left.arrow.right") }
+                .tabItem { Label("Commands", systemImage: "bubble.left.and.bubble.right") }
 
             RawTab(ble: ble)
                 .tabItem { Label("Raw", systemImage: "list.bullet.rectangle") }
@@ -65,6 +65,7 @@ private struct CommandsTab: View {
         NavigationStack {
             CommandsContent(ble: ble)
                 .navigationTitle("Commands")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { ble.scan(); showPicker = true } label: {
@@ -88,6 +89,7 @@ private struct RawTab: View {
         NavigationStack {
             RawFeedContent(ble: ble)
                 .navigationTitle("Raw Feed")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { ble.scan(); showPicker = true } label: {
@@ -111,6 +113,7 @@ private struct SystemTab: View {
         NavigationStack {
             SystemLogContent(ble: ble)
                 .navigationTitle("System Log")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { ble.scan(); showPicker = true } label: {
@@ -137,7 +140,7 @@ private enum PadSection: String, CaseIterable, Hashable {
     var icon: String {
         switch self {
         case .status:   return "gauge.with.dots.needle.bottom.50percent"
-        case .commands: return "arrow.left.arrow.right"
+        case .commands: return "bubble.left.and.bubble.right"
         case .raw:      return "list.bullet.rectangle"
         case .system:   return "antenna.radiowaves.left.and.right"
         }
@@ -260,77 +263,122 @@ private struct StatusContent: View {
     }
 }
 
-// MARK: - Commands content
+// MARK: - Commands content (iMessage-style)
 
 private struct CommandsContent: View {
     @ObservedObject var ble: ChairBLEManager
     @State private var command = ""
-    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
-        if sizeClass == .regular {
-            padLayout
-        } else {
-            phoneLayout
-        }
-    }
-
-    private var phoneLayout: some View {
-        List {
-            Section { composerView.padding(.vertical, 4) } header: { Text("Send") }
-            Section { commandLogRows } header: { Text("Command Log") }
-        }
-    }
-
-    private var padLayout: some View {
-        HStack(alignment: .top, spacing: 0) {
-            ScrollView {
-                composerView.padding(16)
-            }
-            .frame(width: 340)
-            .background(Color(.systemGroupedBackground))
-
+        VStack(spacing: 0) {
+            chatList
             Divider()
-
-            List {
-                Section { commandLogRows } header: { Text("Command Log") }
-            }
+            cheatSheet
+                .padding(.vertical, 8)
+                .background(Color(.secondarySystemBackground))
+            Divider()
+            composer
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                .background(Color(.systemBackground))
         }
         .background(Color(.systemGroupedBackground))
     }
 
-    private var composerView: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 10) {
-                Text(commandDisplay)
-                    .font(.system(size: 24, weight: .semibold, design: .monospaced))
-                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .center)
-                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
-                    .accessibilityLabel("Command \(commandDisplay)")
-
-                Button { command = String(command.dropLast()) } label: {
-                    Image(systemName: "delete.left").frame(width: 28, height: 28)
+    private var chatList: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                if ble.commandLogs.isEmpty {
+                    emptyState
+                        .frame(maxWidth: .infinity, minHeight: 240)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 6) {
+                        ForEach(ble.commandLogs) { entry in
+                            ChatBubble(entry: entry)
+                                .id(entry.id)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
                 }
-                .buttonStyle(.bordered)
-                .disabled(command.isEmpty)
-                .accessibilityLabel("Delete digit")
             }
-            HexKeypad(command: $command, send: sendCommand)
+            .onChange(of: ble.commandLogs.count) { _, _ in
+                if let last = ble.commandLogs.last {
+                    withAnimation(.easeOut(duration: 0.18)) {
+                        proxy.scrollTo(last.id, anchor: .bottom)
+                    }
+                }
+            }
         }
     }
 
-    @ViewBuilder
-    private var commandLogRows: some View {
-        if ble.commandLogs.isEmpty {
-            ContentUnavailableView(
-                "No Commands",
-                systemImage: "arrow.left.arrow.right",
-                description: Text("Remote-chair commands and app-sent commands will appear here.")
-            )
-        } else {
-            ForEach(Array(ble.commandLogs.reversed())) { entry in
-                CommandLogRow(entry: entry)
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 36))
+                .foregroundStyle(.tertiary)
+            Text("No commands yet")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            Text("Press a chair button or send a hex code below.")
+                .font(.footnote)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(20)
+    }
+
+    private var cheatSheet: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(CommandCatalog.cheatSheet, id: \.code) { item in
+                    Button { command = item.code } label: {
+                        VStack(spacing: 1) {
+                            Text(item.code)
+                                .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text(item.label)
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(.separator), lineWidth: 0.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
+            .padding(.horizontal, 14)
+        }
+    }
+
+    private var composer: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Text(commandDisplay)
+                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    .frame(maxWidth: .infinity, minHeight: 40, alignment: .center)
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+                    .accessibilityLabel("Command \(commandDisplay)")
+
+                Button { command = String(command.dropLast()) } label: {
+                    Image(systemName: "delete.left").frame(width: 26, height: 26)
+                }
+                .buttonStyle(.bordered)
+                .disabled(command.isEmpty)
+
+                Button(action: sendCommand) {
+                    Image(systemName: "paperplane.fill").frame(width: 26, height: 26)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!ChairDecode.isFourDigitHex(command))
+            }
+            HexKeypadCompact(command: $command)
         }
     }
 
@@ -339,7 +387,9 @@ private struct CommandsContent: View {
     }
 
     private var commandDisplay: String {
-        normalizedCommand + String(repeating: "-", count: max(0, 4 - normalizedCommand.count))
+        let trimmed = normalizedCommand
+        let placeholder = String(repeating: "_", count: max(0, 4 - trimmed.count))
+        return trimmed + placeholder
     }
 
     private func sendCommand() {
@@ -349,7 +399,121 @@ private struct CommandsContent: View {
     }
 }
 
-// MARK: - Raw feed content
+// MARK: - Chat bubble
+
+private struct ChatBubble: View {
+    let entry: ChairCommandEntry
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            if entry.direction == .appToChair {
+                Spacer(minLength: 48)
+                bubble
+            } else if entry.direction == .error {
+                bubble
+                    .frame(maxWidth: .infinity)
+            } else {
+                bubble
+                Spacer(minLength: 48)
+            }
+        }
+    }
+
+    private var bubble: some View {
+        VStack(alignment: bubbleAlignment, spacing: 3) {
+            HStack(spacing: 6) {
+                Text(entry.title)
+                    .font(.callout.weight(.semibold))
+                    .lineLimit(2)
+                if let subtitle = entry.subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 9, weight: .semibold))
+                        .opacity(0.75)
+                }
+            }
+            if let note = entry.note {
+                Text(note)
+                    .font(.caption2)
+                    .opacity(0.7)
+            }
+            HStack(spacing: 6) {
+                if !entry.code.isEmpty {
+                    Text(entry.code)
+                        .font(.system(.caption, design: .monospaced).weight(.medium))
+                        .opacity(0.85)
+                }
+                Text(timeString)
+                    .font(.caption2.monospacedDigit())
+                    .opacity(0.55)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(bubbleBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .foregroundStyle(foreground)
+    }
+
+    private var bubbleAlignment: HorizontalAlignment {
+        entry.direction == .appToChair ? .trailing : .leading
+    }
+
+    private var timeString: String {
+        entry.date.formatted(date: .omitted, time: .standard)
+    }
+
+    private var bubbleBackground: Color {
+        switch entry.direction {
+        case .appToChair:    return .blue
+        case .chairToRemote: return Color(.systemGray5)
+        case .remoteToChair: return .green
+        case .error:         return .red.opacity(0.9)
+        }
+    }
+
+    private var foreground: Color {
+        switch entry.direction {
+        case .appToChair, .remoteToChair, .error: return .white
+        case .chairToRemote: return .primary
+        }
+    }
+}
+
+// MARK: - Hex keypad (compact, inline)
+
+private struct HexKeypadCompact: View {
+    @Binding var command: String
+
+    private let rows = [
+        ["0", "1", "2", "3"],
+        ["4", "5", "6", "7"],
+        ["8", "9", "A", "B"],
+        ["C", "D", "E", "F"],
+    ]
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ForEach(rows, id: \.self) { row in
+                HStack(spacing: 6) {
+                    ForEach(row, id: \.self) { digit in
+                        Button { append(digit) } label: {
+                            Text(digit)
+                                .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                                .frame(maxWidth: .infinity, minHeight: 38)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+        }
+    }
+
+    private func append(_ digit: String) {
+        guard command.count < 4 else { return }
+        command.append(digit)
+    }
+}
+
+// MARK: - Raw feed content (clean, left-aligned)
 
 private struct RawFeedContent: View {
     @ObservedObject var ble: ChairBLEManager
@@ -363,7 +527,7 @@ private struct RawFeedContent: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Label("\(displayedCount) kept", systemImage: "tray.full")
+                Label("\(displayedCount) lines", systemImage: "tray.full")
                 if ble.droppedRawLogCount > 0 {
                     Text("\(ble.droppedRawLogCount) dropped")
                         .foregroundStyle(.secondary)
@@ -386,26 +550,30 @@ private struct RawFeedContent: View {
             .font(.caption)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
+            .background(Color(.secondarySystemBackground))
+
+            Divider()
 
             ScrollViewReader { proxy in
                 ScrollView([.vertical, .horizontal]) {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(displayedText.isEmpty ? "waiting for BLE notifications..." : displayedText)
+                        Text(displayedText.isEmpty ? "Waiting for BLE notifications…" : displayedText)
                             .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(.green)
+                            .foregroundStyle(.primary)
                             .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
                         Color.clear.frame(height: 1).id("terminal-end")
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black, in: RoundedRectangle(cornerRadius: 8))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(Color(.systemBackground))
                 .overlay(alignment: .topTrailing) {
                     if isPaused {
                         Text("PAUSED")
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(.black)
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(.orange, in: RoundedRectangle(cornerRadius: 4))
@@ -417,12 +585,7 @@ private struct RawFeedContent: View {
                     proxy.scrollTo("terminal-end", anchor: .bottom)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 16)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
     }
 }
 
@@ -461,18 +624,13 @@ private struct ConnectionPanel: View {
                     .fill(ble.isConnected ? .green : (ble.isScanning ? .orange : .secondary))
                     .frame(width: 10, height: 10)
 
-                Text(ble.connectionState)
-                    .font(.headline)
-                    .lineLimit(2)
-
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ble.connectionState)
+                        .font(.headline)
+                        .lineLimit(2)
+                    statsRow
+                }
                 Spacer()
-
-                Text("\(ble.notifyCount)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.thinMaterial, in: Capsule())
             }
 
             HStack {
@@ -499,110 +657,169 @@ private struct ConnectionPanel: View {
             DevicePickerSheet(ble: ble, isPresented: $showDevicePicker)
         }
     }
+
+    private var statsRow: some View {
+        HStack(spacing: 10) {
+            Label("\(ble.notifyCount)", systemImage: "arrow.down")
+                .accessibilityLabel("Received \(ble.notifyCount) frames")
+            Label("\(ble.sentCount)", systemImage: "arrow.up")
+                .accessibilityLabel("Sent \(ble.sentCount) commands")
+        }
+        .font(.caption2.monospacedDigit())
+        .foregroundStyle(.secondary)
+        .labelStyle(.titleAndIcon)
+    }
 }
 
-// MARK: - Device picker
+// MARK: - Device picker (iOS Bluetooth settings style)
 
 private struct DevicePickerSheet: View {
     @ObservedObject var ble: ChairBLEManager
     @Binding var isPresented: Bool
+    @AppStorage("scannerAutoRefresh") private var autoRefresh: Bool = true
+
+    private let refreshTimer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
+
+    private var chairDevices: [DiscoveredDevice] {
+        ble.displayedDevices.filter { $0.name.localizedCaseInsensitiveContains("ChairSniffer") }
+    }
+    private var otherDevices: [DiscoveredDevice] {
+        ble.displayedDevices.filter { !$0.name.localizedCaseInsensitiveContains("ChairSniffer") }
+    }
 
     var body: some View {
         NavigationStack {
-            List {
-                if ble.discoveredDevices.isEmpty {
-                    ContentUnavailableView(
-                        "Scanning...",
-                        systemImage: "dot.radiowaves.left.and.right",
-                        description: Text("Move closer to your device.")
-                    )
+            Group {
+                if ble.isBluetoothReady {
+                    deviceList
                 } else {
-                    ForEach(ble.discoveredDevices.sorted(by: { $0.rssi > $1.rssi })) { device in
-                        Button {
-                            ble.connect(device)
-                            isPresented = false
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(device.name)
-                                        .font(.body)
-                                        .foregroundStyle(.primary)
-                                    Text("RSSI \(device.rssi) dBm")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundStyle(.secondary)
-                                    .font(.caption)
-                            }
-                        }
-                    }
+                    bluetoothUnavailable
                 }
             }
-            .navigationTitle("Select Device")
+            .navigationTitle("Bluetooth")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") {
-                        ble.disconnect()
+                    Button("Done") {
                         isPresented = false
                     }
                 }
             }
+            .onAppear { ble.refreshDeviceList() }
+            .onReceive(refreshTimer) { _ in
+                if autoRefresh { ble.refreshDeviceList() }
+            }
         }
     }
-}
 
-// MARK: - Hex keypad
-
-private struct HexKeypad: View {
-    @Binding var command: String
-    let send: () -> Void
-
-    private let rows = [
-        ["0", "1", "2", "3"],
-        ["4", "5", "6", "7"],
-        ["8", "9", "A", "B"],
-        ["C", "D", "E", "F"],
-    ]
-
-    var body: some View {
-        VStack(spacing: 8) {
-            ForEach(rows, id: \.self) { row in
-                HStack(spacing: 8) {
-                    ForEach(row, id: \.self) { digit in
-                        Button { append(digit) } label: {
-                            Text(digit)
-                                .font(.system(size: 20, weight: .semibold, design: .monospaced))
-                                .frame(maxWidth: .infinity, minHeight: 46)
+    private var deviceList: some View {
+        List {
+            Section {
+                Toggle(isOn: $autoRefresh) {
+                    Label("Auto-refresh", systemImage: "arrow.triangle.2.circlepath")
+                }
+                Button {
+                    ble.refreshDeviceList()
+                } label: {
+                    HStack {
+                        Label("Refresh now", systemImage: "arrow.clockwise")
+                        Spacer()
+                        if ble.isScanning {
+                            ProgressView()
+                                .controlSize(.small)
                         }
-                        .buttonStyle(.bordered)
+                    }
+                }
+            } footer: {
+                Text(autoRefresh
+                     ? "List re-sorts every 5 seconds."
+                     : "List stays put until you refresh.")
+            }
+
+            if !chairDevices.isEmpty {
+                Section("Chair Bridges") {
+                    ForEach(chairDevices) { device in
+                        DeviceRow(name: device.name, isMatch: true) {
+                            ble.connect(device)
+                            isPresented = false
+                        }
                     }
                 }
             }
-            HStack(spacing: 8) {
-                Button(role: .destructive) {
-                    command = ""
-                } label: {
-                    Label("Clear", systemImage: "xmark")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.bordered)
-                .disabled(command.isEmpty)
 
-                Button(action: send) {
-                    Label("Send", systemImage: "paperplane.fill")
-                        .frame(maxWidth: .infinity, minHeight: 44)
+            if !otherDevices.isEmpty {
+                Section("Other Devices") {
+                    ForEach(otherDevices) { device in
+                        DeviceRow(name: device.name, isMatch: false) {
+                            ble.connect(device)
+                            isPresented = false
+                        }
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!ChairDecode.isFourDigitHex(command))
+            }
+
+            if chairDevices.isEmpty && otherDevices.isEmpty {
+                Section {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            ProgressView()
+                            Text("Scanning for devices…")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 12)
+                        Spacer()
+                    }
+                }
             }
         }
+        .listStyle(.insetGrouped)
     }
 
-    private func append(_ digit: String) {
-        guard command.count < 4 else { return }
-        command.append(digit)
+    private var bluetoothUnavailable: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.secondary)
+            Text(ble.bluetoothStatusMessage)
+                .font(.title3.weight(.semibold))
+                .multilineTextAlignment(.center)
+            Text("Turn on Bluetooth in Settings to scan for nearby chair bridges.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 30)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
+    }
+}
+
+private struct DeviceRow: View {
+    let name: String
+    let isMatch: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 10) {
+                if isMatch {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(.tint)
+                        .font(.body)
+                }
+                Text(name)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(.tertiary)
+                    .font(.caption.weight(.semibold))
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -649,7 +866,7 @@ private struct DiffRawLine: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if value.isEmpty {
-                Text("Waiting...")
+                Text("Waiting…")
                     .font(.system(.footnote, design: .monospaced))
                     .foregroundStyle(.secondary)
             } else {
@@ -675,7 +892,7 @@ private struct DiffRawLine: View {
     }
 }
 
-// MARK: - Log rows
+// MARK: - System log row
 
 private struct LogRow: View {
     let entry: ChairLogEntry
@@ -684,13 +901,13 @@ private struct LogRow: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
                 .foregroundStyle(color)
-                .frame(width: 18)
+                .frame(width: 20)
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.date.formatted(date: .omitted, time: .standard))
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
                 Text(entry.text)
-                    .font(.system(.footnote, design: .monospaced))
+                    .font(.system(.footnote))
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -715,47 +932,6 @@ private struct LogRow: View {
         case .sent:    return .purple
         case .error:   return .red
         case .system:  return .blue
-        }
-    }
-}
-
-private struct CommandLogRow: View {
-    let entry: ChairCommandEntry
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon)
-                .foregroundStyle(color)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.date.formatted(date: .omitted, time: .standard))
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Text(entry.text)
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(color)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-
-    private var icon: String {
-        switch entry.direction {
-        case .remoteToChair: return "arrow.right.circle.fill"
-        case .chairToRemote: return "arrow.left.circle.fill"
-        case .appToChair:    return "paperplane.circle.fill"
-        case .error:         return "exclamationmark.triangle.fill"
-        }
-    }
-
-    private var color: Color {
-        switch entry.direction {
-        case .remoteToChair: return .green
-        case .chairToRemote: return .orange
-        case .appToChair:    return .purple
-        case .error:         return .red
         }
     }
 }

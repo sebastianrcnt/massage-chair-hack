@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		10262836AC9927D0C070B39C /* ChairSnifferApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2EA5B97B3CE131165EBF6D /* ChairSnifferApp.swift */; };
 		5C886A969D1C11B126FEEF58 /* ChairBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D72476289B16EB230ACA741 /* ChairBLEManager.swift */; };
+		657BB532943FDD5EFA67FFB0 /* CommandCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9EDD33F626420E08FFC675D /* CommandCatalog.swift */; };
 		7938F2AF723F7E388EA614C4 /* ChairDecode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4271D1248C66E8B74CED510D /* ChairDecode.swift */; };
 		E80F6D8B127D1F4A4626B8FD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B1F66EBB3A48B3D1C1B9ED /* ContentView.swift */; };
 /* End PBXBuildFile section */
@@ -19,6 +20,7 @@
 		4271D1248C66E8B74CED510D /* ChairDecode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairDecode.swift; sourceTree = "<group>"; };
 		5D72476289B16EB230ACA741 /* ChairBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairBLEManager.swift; sourceTree = "<group>"; };
 		A38804FAAC956A76B39DADCF /* ChairSniffer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChairSniffer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B9EDD33F626420E08FFC675D /* CommandCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandCatalog.swift; sourceTree = "<group>"; };
 		CED4EBD8C059C7C8899B468F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -45,6 +47,7 @@
 				5D72476289B16EB230ACA741 /* ChairBLEManager.swift */,
 				4271D1248C66E8B74CED510D /* ChairDecode.swift */,
 				0D2EA5B97B3CE131165EBF6D /* ChairSnifferApp.swift */,
+				B9EDD33F626420E08FFC675D /* CommandCatalog.swift */,
 				29B1F66EBB3A48B3D1C1B9ED /* ContentView.swift */,
 				CED4EBD8C059C7C8899B468F /* Info.plist */,
 			);
@@ -113,6 +116,7 @@
 				5C886A969D1C11B126FEEF58 /* ChairBLEManager.swift in Sources */,
 				7938F2AF723F7E388EA614C4 /* ChairDecode.swift in Sources */,
 				10262836AC9927D0C070B39C /* ChairSnifferApp.swift in Sources */,
+				657BB532943FDD5EFA67FFB0 /* CommandCatalog.swift in Sources */,
 				E80F6D8B127D1F4A4626B8FD /* ContentView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

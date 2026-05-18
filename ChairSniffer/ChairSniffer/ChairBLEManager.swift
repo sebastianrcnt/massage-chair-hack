@@ -27,7 +27,10 @@ struct ChairCommandEntry: Identifiable {
     let id = UUID()
     let date = Date()
     let direction: ChairCommandDirection
-    let text: String
+    let code: String
+    let title: String
+    let subtitle: String?
+    let note: String?
 }
 
 struct DiscoveredDevice: Identifiable {
@@ -47,7 +50,10 @@ final class ChairBLEManager: NSObject, ObservableObject {
     @Published var connectionState = "Starting Bluetooth"
     @Published var isConnected = false
     @Published var isScanning = false
+    @Published var isBluetoothReady = false
+    @Published var bluetoothStatusMessage = "Initializing Bluetooth…"
     @Published var notifyCount = 0
+    @Published var sentCount = 0
     @Published var latestShort = ""
     @Published var latestLong = ""
     @Published var rawLogs: [ChairLogEntry] = []
@@ -58,11 +64,20 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private let serviceUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abc")
     private let dataUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abd")
     private let commandUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abe")
-    @Published var discoveredDevices: [DiscoveredDevice] = []
+    private var discoveredDevices: [DiscoveredDevice] = []
+    @Published var displayedDevices: [DiscoveredDevice] = []
 
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var commandCharacteristic: CBCharacteristic?
+    private var hasReceivedFirstNotification = false
+    private var connectedDeviceName: String?
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
 
     override init() {
         super.init()
@@ -74,7 +89,9 @@ final class ChairBLEManager: NSObject, ObservableObject {
     }
 
     var rawTerminalText: String {
-        rawLogs.map(\.text).joined(separator: "\n")
+        rawLogs.map { entry in
+            "\(Self.timeFormatter.string(from: entry.date))  \(entry.text)"
+        }.joined(separator: "\n")
     }
 
     func scan() {
@@ -89,10 +106,21 @@ final class ChairBLEManager: NSObject, ObservableObject {
         }
         commandCharacteristic = nil
         discoveredDevices = []
+        displayedDevices = []
         isScanning = true
         connectionState = "Scanning..."
-        appendSystem(.system, "Scanning for devices")
-        central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
+        appendSystem(.system, "Scanning for nearby chair bridges…")
+        central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
+    }
+
+    func refreshDeviceList() {
+        displayedDevices = discoveredDevices.sorted { a, b in
+            let aChair = a.name.localizedCaseInsensitiveContains("ChairSniffer")
+            let bChair = b.name.localizedCaseInsensitiveContains("ChairSniffer")
+            if aChair != bChair { return aChair }
+            if a.rssi != b.rssi { return a.rssi > b.rssi }
+            return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
+        }
     }
 
     func disconnect() {
@@ -103,32 +131,43 @@ final class ChairBLEManager: NSObject, ObservableObject {
         isScanning = false
         isConnected = false
         connectionState = "Disconnected"
+        resetSession()
     }
 
     func connect(_ device: DiscoveredDevice) {
         central.stopScan()
         isScanning = false
         peripheral = device.peripheral
+        connectedDeviceName = device.name
         device.peripheral.delegate = self
         connectionState = "Connecting to \(device.name)"
-        appendSystem(.system, "Connecting to \(device.name)")
+        appendSystem(.system, "Connecting to \(device.name) (\(device.rssi) dBm)")
+        resetSession()
         central.connect(device.peripheral)
     }
 
     func send(command: String) {
         let normalized = command.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard ChairDecode.isFourDigitHex(normalized) else {
-            appendCommand(.error, "Invalid command. Use 4 hex digits.")
+            appendCommand(.error, code: "", title: "Invalid command", subtitle: nil, note: "use 4 hex digits")
             return
         }
 
         guard let peripheral, let commandCharacteristic, isConnected else {
-            appendCommand(.error, "Not connected.")
+            appendCommand(.error, code: normalized, title: "Not connected", subtitle: nil, note: nil)
             return
         }
 
-        appendCommand(.appToChair, "App -> Chair  \(ChairDecode.spaced(normalized))")
+        let info = CommandCatalog.describe(normalized)
+        appendCommand(
+            .appToChair,
+            code: normalized,
+            title: info?.name ?? "Send",
+            subtitle: info?.role.rawValue,
+            note: info?.note
+        )
         peripheral.writeValue(Data("SEND \(normalized)".utf8), for: commandCharacteristic, type: .withResponse)
+        sentCount += 1
     }
 
     private var bluetoothStateText: String {
@@ -150,13 +189,29 @@ final class ChairBLEManager: NSObject, ObservableObject {
         }
     }
 
+    private func resetSession() {
+        notifyCount = 0
+        sentCount = 0
+        hasReceivedFirstNotification = false
+    }
+
     private func appendRaw(_ kind: ChairLogEntry.Kind, _ text: String) {
         rawLogs.append(ChairLogEntry(kind: kind, text: text))
         trim(&rawLogs, limit: LogLimit.raw) { self.droppedRawLogCount += $0 }
     }
 
-    private func appendCommand(_ direction: ChairCommandDirection, _ text: String) {
-        commandLogs.append(ChairCommandEntry(direction: direction, text: text))
+    private func appendCommand(_ direction: ChairCommandDirection,
+                               code: String,
+                               title: String,
+                               subtitle: String?,
+                               note: String?) {
+        commandLogs.append(ChairCommandEntry(
+            direction: direction,
+            code: code,
+            title: title,
+            subtitle: subtitle,
+            note: note
+        ))
         trim(&commandLogs, limit: LogLimit.command)
     }
 
@@ -182,6 +237,13 @@ final class ChairBLEManager: NSObject, ObservableObject {
         notifyCount += 1
         appendRaw(.status, text)
 
+        if !hasReceivedFirstNotification {
+            hasReceivedFirstNotification = true
+            let name = connectedDeviceName ?? "chair"
+            connectionState = "Connected to \(name)"
+            appendSystem(.system, "Receiving chair data")
+        }
+
         if text.hasPrefix("[CHAIR] ") {
             let payload = String(text.dropFirst(8))
             if payload.count > 12 {
@@ -189,22 +251,44 @@ final class ChairBLEManager: NSObject, ObservableObject {
             } else if payload.count > 5 {
                 latestShort = payload
             } else {
-                appendCommand(.chairToRemote, "Chair -> Remote: \(ChairDecode.spaced(payload))")
+                let info = CommandCatalog.describe(payload)
+                appendCommand(
+                    .chairToRemote,
+                    code: payload,
+                    title: info?.name ?? "Unknown",
+                    subtitle: info?.role.rawValue,
+                    note: info?.note
+                )
             }
         } else if text.hasPrefix("[REMOTE] ") {
-            appendCommand(.remoteToChair, "Remote -> Chair: \(ChairDecode.spaced(String(text.dropFirst(9))))")
+            let payload = String(text.dropFirst(9))
+            let info = CommandCatalog.describe(payload)
+            appendCommand(
+                .remoteToChair,
+                code: payload,
+                title: info?.name ?? "Unknown",
+                subtitle: info?.role.rawValue,
+                note: info?.note
+            )
         } else if text.hasPrefix("[TRANSMITTED] ") {
-            appendCommand(.appToChair, "App -> Chair: \(ChairDecode.spaced(String(text.dropFirst(14))))")
+            // Echo of our own send. Already shown locally — skip the chat duplicate.
         } else if text.hasPrefix("[ERROR] ") {
-            appendCommand(.error, text)
-            appendSystem(.error, text)
+            let body = String(text.dropFirst(8))
+            appendCommand(.error, code: "", title: body, subtitle: nil, note: nil)
+            appendSystem(.error, body)
         }
     }
 }
 
 extension ChairBLEManager: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        connectionState = bluetoothStateText
+        isBluetoothReady = central.state == .poweredOn
+        let text = bluetoothStateText
+        bluetoothStatusMessage = text
+        connectionState = text
+        if central.state != .unknown {
+            appendSystem(.system, text)
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
@@ -216,69 +300,86 @@ extension ChairBLEManager: CBCentralManagerDelegate {
             discoveredDevices[idx] = device
         } else {
             discoveredDevices.append(device)
+            // Insert into displayed list only when discovered for the first time;
+            // keep its position stable until the next snapshot.
+            if !displayedDevices.contains(where: { $0.id == device.id }) {
+                displayedDevices.append(device)
+            }
         }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         isConnected = true
-        connectionState = "Connected, discovering services"
-        appendSystem(.system, "Connected")
+        let name = connectedDeviceName ?? peripheral.name ?? "device"
+        connectionState = "Connected to \(name), discovering…"
+        appendSystem(.system, "Connected to \(name)")
         peripheral.discoverServices(nil)
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         isConnected = false
         connectionState = "Connect failed"
-        appendSystem(.error, "Connect failed: \(error?.localizedDescription ?? "unknown error")")
+        appendSystem(.error, "Couldn't connect: \(error?.localizedDescription ?? "unknown error")")
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         isConnected = false
         commandCharacteristic = nil
         connectionState = "Disconnected"
-        appendSystem(.error, "Disconnected: \(error?.localizedDescription ?? "connection closed")")
+        if let error {
+            appendSystem(.error, "Disconnected (\(error.localizedDescription))")
+        } else {
+            appendSystem(.system, "Disconnected")
+        }
+        resetSession()
     }
 }
 
 extension ChairBLEManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         if let error {
-            appendSystem(.error, "Service discovery failed: \(error.localizedDescription)")
+            appendSystem(.error, "Couldn't read chair services: \(error.localizedDescription)")
             return
         }
 
         let services = peripheral.services ?? []
         if services.isEmpty {
             connectionState = "Connected, no services found"
-            appendSystem(.error, "No BLE services found")
+            appendSystem(.error, "Chair advertises no BLE services — wrong device?")
             return
         }
 
         for service in services {
-            appendSystem(.system, "Service \(service.uuid.uuidString)")
             peripheral.discoverCharacteristics(nil, for: service)
         }
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         if let error {
-            appendSystem(.error, "Characteristic discovery failed: \(error.localizedDescription)")
+            appendSystem(.error, "Couldn't read characteristics: \(error.localizedDescription)")
             return
         }
 
         let characteristics = service.characteristics ?? []
+        var hasData = false
+        var hasCommand = false
         for characteristic in characteristics {
-            appendSystem(.system, "Char \(characteristic.uuid.uuidString)")
             if characteristic.uuid == dataUUID {
                 peripheral.setNotifyValue(true, for: characteristic)
+                hasData = true
             } else if characteristic.uuid == commandUUID {
                 commandCharacteristic = characteristic
+                hasCommand = true
             }
         }
 
-        if characteristics.contains(where: { $0.uuid == dataUUID }) {
+        if hasData {
             connectionState = "Subscribed, waiting for chair data"
-            appendSystem(.system, "Subscribed to chair data")
+            if hasCommand {
+                appendSystem(.system, "Subscribed; chair can both receive and send")
+            } else {
+                appendSystem(.system, "Subscribed; receive only (no command channel)")
+            }
         }
     }
 
@@ -295,7 +396,7 @@ extension ChairBLEManager: CBPeripheralDelegate {
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         if let error {
-            appendCommand(.error, "Send failed: \(error.localizedDescription)")
+            appendCommand(.error, code: "", title: "Send failed", subtitle: nil, note: error.localizedDescription)
         }
     }
 }

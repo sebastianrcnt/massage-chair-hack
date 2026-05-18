@@ -8,20 +8,38 @@
 
 /* Begin PBXBuildFile section */
 		10262836AC9927D0C070B39C /* ChairSnifferApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2EA5B97B3CE131165EBF6D /* ChairSnifferApp.swift */; };
+		1157D9AE0F8C94DC3DAE08D8 /* RemoteCommandPad.swift in Sources */ = {isa = PBXBuildFile; fileRef = 517D861F1EF30D80FB3A7BF2 /* RemoteCommandPad.swift */; };
+		1C7C859D20FD125A0195E50A /* ConnectionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B9DE5008847EC5E0810B4EE /* ConnectionViews.swift */; };
+		2CCBC0C6B4F7FC14FC9D0132 /* StatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 989EFDB192388A3CAC07AD8E /* StatusView.swift */; };
+		34AD5423595CA3E524B68E48 /* RawFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE68930C6E5BABE1FFEE1A8 /* RawFeedView.swift */; };
+		3EC48DD3F538C8C200F2B7B2 /* CustomHexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE4A5270E2D4D99549DC0FF /* CustomHexView.swift */; };
+		50C6CB05D0A85C2490AB1131 /* ViewStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C914763127924307253DC1C /* ViewStyles.swift */; };
 		5C886A969D1C11B126FEEF58 /* ChairBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D72476289B16EB230ACA741 /* ChairBLEManager.swift */; };
 		657BB532943FDD5EFA67FFB0 /* CommandCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9EDD33F626420E08FFC675D /* CommandCatalog.swift */; };
 		7938F2AF723F7E388EA614C4 /* ChairDecode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4271D1248C66E8B74CED510D /* ChairDecode.swift */; };
+		7B4B8FDD0A8C4A169148765B /* SystemLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 576FD6BF74A8C971F79CB87D /* SystemLogView.swift */; };
+		7BFF538990EBC8ACF32CE373 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A355DC1C61B7E9323E86928 /* Assets.xcassets */; };
+		DA21671D551602758DED6275 /* CommandsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0995789B56E065C5D98111CA /* CommandsView.swift */; };
 		E80F6D8B127D1F4A4626B8FD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29B1F66EBB3A48B3D1C1B9ED /* ContentView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0995789B56E065C5D98111CA /* CommandsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsView.swift; sourceTree = "<group>"; };
 		0D2EA5B97B3CE131165EBF6D /* ChairSnifferApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairSnifferApp.swift; sourceTree = "<group>"; };
 		29B1F66EBB3A48B3D1C1B9ED /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		2B9DE5008847EC5E0810B4EE /* ConnectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionViews.swift; sourceTree = "<group>"; };
+		2C914763127924307253DC1C /* ViewStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewStyles.swift; sourceTree = "<group>"; };
 		4271D1248C66E8B74CED510D /* ChairDecode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairDecode.swift; sourceTree = "<group>"; };
+		4A355DC1C61B7E9323E86928 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		517D861F1EF30D80FB3A7BF2 /* RemoteCommandPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCommandPad.swift; sourceTree = "<group>"; };
+		576FD6BF74A8C971F79CB87D /* SystemLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemLogView.swift; sourceTree = "<group>"; };
 		5D72476289B16EB230ACA741 /* ChairBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairBLEManager.swift; sourceTree = "<group>"; };
+		6DE68930C6E5BABE1FFEE1A8 /* RawFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawFeedView.swift; sourceTree = "<group>"; };
+		989EFDB192388A3CAC07AD8E /* StatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusView.swift; sourceTree = "<group>"; };
 		A38804FAAC956A76B39DADCF /* ChairSniffer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChairSniffer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9EDD33F626420E08FFC675D /* CommandCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandCatalog.swift; sourceTree = "<group>"; };
 		CED4EBD8C059C7C8899B468F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		FBE4A5270E2D4D99549DC0FF /* CustomHexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomHexView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -44,12 +62,21 @@
 		CE378053B76FAE0B38F5E53F /* ChairSniffer */ = {
 			isa = PBXGroup;
 			children = (
+				4A355DC1C61B7E9323E86928 /* Assets.xcassets */,
 				5D72476289B16EB230ACA741 /* ChairBLEManager.swift */,
 				4271D1248C66E8B74CED510D /* ChairDecode.swift */,
 				0D2EA5B97B3CE131165EBF6D /* ChairSnifferApp.swift */,
 				B9EDD33F626420E08FFC675D /* CommandCatalog.swift */,
+				0995789B56E065C5D98111CA /* CommandsView.swift */,
+				2B9DE5008847EC5E0810B4EE /* ConnectionViews.swift */,
 				29B1F66EBB3A48B3D1C1B9ED /* ContentView.swift */,
+				FBE4A5270E2D4D99549DC0FF /* CustomHexView.swift */,
 				CED4EBD8C059C7C8899B468F /* Info.plist */,
+				6DE68930C6E5BABE1FFEE1A8 /* RawFeedView.swift */,
+				517D861F1EF30D80FB3A7BF2 /* RemoteCommandPad.swift */,
+				989EFDB192388A3CAC07AD8E /* StatusView.swift */,
+				576FD6BF74A8C971F79CB87D /* SystemLogView.swift */,
+				2C914763127924307253DC1C /* ViewStyles.swift */,
 			);
 			path = ChairSniffer;
 			sourceTree = "<group>";
@@ -62,6 +89,7 @@
 			buildConfigurationList = 760B5AAE40A0D6EB9BCDB100 /* Build configuration list for PBXNativeTarget "ChairSniffer" */;
 			buildPhases = (
 				51594E8BB8FE32DCBBF00441 /* Sources */,
+				E302AB69241219D0D49A0302 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -108,6 +136,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		E302AB69241219D0D49A0302 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7BFF538990EBC8ACF32CE373 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		51594E8BB8FE32DCBBF00441 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -117,7 +156,15 @@
 				7938F2AF723F7E388EA614C4 /* ChairDecode.swift in Sources */,
 				10262836AC9927D0C070B39C /* ChairSnifferApp.swift in Sources */,
 				657BB532943FDD5EFA67FFB0 /* CommandCatalog.swift in Sources */,
+				DA21671D551602758DED6275 /* CommandsView.swift in Sources */,
+				1C7C859D20FD125A0195E50A /* ConnectionViews.swift in Sources */,
 				E80F6D8B127D1F4A4626B8FD /* ContentView.swift in Sources */,
+				3EC48DD3F538C8C200F2B7B2 /* CustomHexView.swift in Sources */,
+				34AD5423595CA3E524B68E48 /* RawFeedView.swift in Sources */,
+				1157D9AE0F8C94DC3DAE08D8 /* RemoteCommandPad.swift in Sources */,
+				2CCBC0C6B4F7FC14FC9D0132 /* StatusView.swift in Sources */,
+				7B4B8FDD0A8C4A169148765B /* SystemLogView.swift in Sources */,
+				50C6CB05D0A85C2490AB1131 /* ViewStyles.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

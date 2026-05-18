@@ -19,5 +19,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.siwonjeong.ChairSniffer
         DEVELOPMENT_TEAM: CYYK3A72BM
         INFOPLIST_FILE: ChairSniffer/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         SUPPORTS_MACCATALYST: YES

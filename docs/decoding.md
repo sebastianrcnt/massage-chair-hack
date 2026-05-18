@@ -83,12 +83,14 @@ the last byte so it can tolerate length changes.
 | `B3[b3:b0]` | Timer ones segment high nibble | Becomes `ones_segment[b7:b4]` | Confirmed |
 | `B4[b7]` | Unknown flag | Not mapped | Unknown |
 | `B4[b6:b5]` | Air strength | `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative |
-| `B4[b5:b4]` | Manual mode indicator | `00` -> chair is in manual mode; overlaps the air-strength low bit and should be confirmed with manual technique blink evidence | Tentative — mode-dependent |
-| `B4[b3]` | Manual: 복합 blink / Massage speed high bit | Manual mode: blinks `0`/`1` when 복합 active. Otherwise: high bit of speed (with `B4[b2]`) | Tentative — mode-dependent |
-| `B4[b2]` | Manual: 롤링 두드림 blink / Massage speed low bit | Manual mode: blinks `0`/`1` when 롤링 두드림 active. With `B4[b3]`: `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative — mode-dependent |
+| `B4[b5:b4]` | Manual mode indicator | `00` -> manual mode, `11` -> auto mode; overlaps the air-strength low bit and should be confirmed with manual technique blink evidence | Tentative — mode-dependent |
+| `B4[b3]` | Manual: 복합 blink | Default `1`; blinks `0`/`1` when 복합 active | Tentative |
+| `B4[b2]` | Manual: 롤링 두드림 blink | Default `1`; blinks `0`/`1` when 롤링 두드림 active | Tentative |
 | `B4[b1]` | Manual: 주무름 두드림 blink | Default `1`; blinks `0`/`1` when 주무름 두드림 active | Tentative |
 | `B4[b0]` | Manual: 느린 두드림 blink | Default `1`; blinks `0`/`1` when 느린 두드림 active | Tentative |
-| `B5[b7:b0]` | Unknown flags | Not mapped | Unknown |
+| `B5[b7:b4]` | Unknown flags | Not mapped | Unknown |
+| `B5[b3:b2]` | Massage speed | `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative |
+| `B5[b1:b0]` | Unknown flags | Not mapped | Unknown |
 | `B6[b7]` | Foot roller | `1` -> on, `0` -> off | Tentative |
 | `B6[b6]` | Leg raise movement | Blinks `0`/`1` about once per second while the leg rest is raising | Tentative |
 | `B6[b5]` | Leg recline movement | Blinks `0`/`1` about once per second while the leg rest is reclining | Tentative |
@@ -145,7 +147,8 @@ bits can blink at the same time.
 
 ### Manual Mode
 
-When `B4[b5:b4] == 00` the chair is in manual mode. Six bits across B3 and B4
+`B4[b5:b4]` indicates the broad mode: `00` is manual mode and `11` is auto mode.
+Six bits across `B3[b7:b6]` and `B4[b3:b0]`
 each correspond to one manual massage technique. Each bit defaults to `1`; while
 the matching technique is the active one, the bit blinks `0`/`1` (~1 Hz, same
 behavior as the back/leg motion bits).
@@ -167,9 +170,6 @@ Overlaps to validate:
 - `B4[b6:b5]` maps to Air strength. `B4[b5]` also participates in the
   `B4[b5:b4]` manual-mode indicator, so the app should confirm manual mode with
   manual technique blink evidence rather than the indicator alone.
-- `B4[b3:b2]` was tentatively mapped to Massage speed. `B4[b3]` is the
-  복합 blink and `B4[b2]` is the 롤링 두드림 blink in manual mode. Same
-  caveat.
 
 ### Packed Timer Detail
 
@@ -218,7 +218,7 @@ timer = 28
 
 ### Observed Long Timer Samples
 
-These samples are covered by `tests/test_chair_decode.py`.
+These samples should be kept aligned with the Swift decoder.
 
 | Timer | Long status sample |
 | --- | --- |

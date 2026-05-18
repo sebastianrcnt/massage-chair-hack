@@ -42,8 +42,8 @@ struct StatusContent: View {
         0xFF, // B1 timer tens
         0xF0, // B2 timer ones (high nibble)
         0xDF, // B3 b7:b6 manual blinks + b4 air + timer ones low nibble
-        0x7F, // B4 b6:b5 air strength + b5:b4 manual indicator + b3:b0 manual technique blinks / speed
-        0x00, // B5 unknown
+        0x7F, // B4 b6:b5 air strength + b5:b4 manual indicator + b3:b0 manual technique blinks
+        0x0C, // B5 b3:b2 massage speed
         0xFF, // B6 foot roller, leg/back motion, width
         0x63, // B7 b6/b5/b1/b0 air-area blinks
         0xE2, // B8 b7:b5 roller position blink + heater b1

@@ -111,7 +111,7 @@ enum ChairDecode {
     }
 
     private static func decodeSpeed(_ bytes: [String]) -> String {
-        guard let value = byteValue(bytes, 4) else {
+        guard let value = byteValue(bytes, 5) else {
             return "-"
         }
 

@@ -3,6 +3,7 @@ import SwiftUI
 struct ControlItem: Identifiable {
     enum Prominence {
         case primary
+        case active
         case normal
         case subtle
     }
@@ -24,6 +25,7 @@ struct ControlItem: Identifiable {
 
 struct RemoteCommandPad: View {
     let availableWidth: CGFloat
+    let liveState: (String) -> ControlState?
     let onPress: (String) -> Void
     let onRelease: () -> Void
 
@@ -75,8 +77,8 @@ struct RemoteCommandPad: View {
         VStack(spacing: 14) {
             // Primary controls
             HStack(spacing: 10) {
-                ControlCommandButton(item: power, minHeight: 58, onPress: onPress, onRelease: onRelease)
-                ControlCommandButton(item: pause, minHeight: 58, onPress: onPress, onRelease: onRelease)
+                ControlCommandButton(item: power, state: liveState(power.code), minHeight: 58, onPress: onPress, onRelease: onRelease)
+                ControlCommandButton(item: pause, state: liveState(pause.code), minHeight: 58, onPress: onPress, onRelease: onRelease)
             }
 
             HStack(spacing: 10) {
@@ -138,7 +140,7 @@ struct RemoteCommandPad: View {
                     spacing: 10
                 ) {
                     ForEach(autoModes) { item in
-                        ControlCommandButton(item: item, minHeight: 48, onPress: onPress, onRelease: onRelease)
+                        ControlCommandButton(item: item, state: liveState(item.code), minHeight: 48, onPress: onPress, onRelease: onRelease)
                     }
                 }
             }
@@ -184,12 +186,12 @@ struct RemoteCommandPad: View {
     }
 
     private func compactButton(_ item: ControlItem) -> some View {
-        ControlCommandButton(item: item, minHeight: 54, onPress: onPress, onRelease: onRelease)
+        ControlCommandButton(item: item, state: liveState(item.code), minHeight: 54, onPress: onPress, onRelease: onRelease)
             .frame(width: sideButtonWidth)
     }
 
     private func wideButton(_ item: ControlItem) -> some View {
-        ControlCommandButton(item: item, minHeight: 54, onPress: onPress, onRelease: onRelease)
+        ControlCommandButton(item: item, state: liveState(item.code), minHeight: 54, onPress: onPress, onRelease: onRelease)
             .frame(width: halfButtonWidth)
     }
 
@@ -198,8 +200,8 @@ struct RemoteCommandPad: View {
             Text(title)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)
-            ControlCommandButton(item: top, minHeight: 46, onPress: onPress, onRelease: onRelease)
-            ControlCommandButton(item: bottom, minHeight: 46, onPress: onPress, onRelease: onRelease)
+            ControlCommandButton(item: top, state: liveState(top.code), minHeight: 46, onPress: onPress, onRelease: onRelease)
+            ControlCommandButton(item: bottom, state: liveState(bottom.code), minHeight: 46, onPress: onPress, onRelease: onRelease)
         }
         .frame(maxWidth: halfButtonWidth)
     }
@@ -207,13 +209,14 @@ struct RemoteCommandPad: View {
 
 private struct ControlCommandButton: View {
     let item: ControlItem
+    var state: ControlState?
     var minHeight: CGFloat = 64
     let onPress: (String) -> Void
     let onRelease: () -> Void
 
     var body: some View {
         Button {} label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 2) {
                 if let icon = item.icon {
                     Image(systemName: icon)
                         .font(iconFont)
@@ -222,6 +225,11 @@ private struct ControlCommandButton: View {
                     .font(labelFont)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
+                if let stateLabel = state?.label {
+                    Text(stateLabel)
+                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                        .opacity(0.85)
+                }
             }
             .foregroundStyle(foreground)
             .frame(maxWidth: .infinity, minHeight: minHeight)
@@ -229,7 +237,7 @@ private struct ControlCommandButton: View {
         }
         .buttonStyle(PressReleaseCommandButtonStyle(
             code: item.code,
-            prominence: item.prominence,
+            prominence: effectiveProminence,
             onPress: onPress,
             onRelease: onRelease
         ))
@@ -239,26 +247,32 @@ private struct ControlCommandButton: View {
         }
     }
 
+    private var effectiveProminence: ControlItem.Prominence {
+        if item.prominence == .primary { return .primary }
+        if state?.isOn == true { return .active }
+        return item.prominence
+    }
+
     private var iconFont: Font {
-        switch item.prominence {
-        case .primary: return .title3.weight(.semibold)
-        case .normal:  return .body.weight(.semibold)
-        case .subtle:  return .callout.weight(.semibold)
+        switch effectiveProminence {
+        case .primary, .active: return .title3.weight(.semibold)
+        case .normal:           return .body.weight(.semibold)
+        case .subtle:           return .callout.weight(.semibold)
         }
     }
 
     private var labelFont: Font {
-        switch item.prominence {
-        case .primary: return .system(size: 14, weight: .semibold)
-        case .normal:  return .system(size: 12, weight: .medium)
-        case .subtle:  return .system(size: 11, weight: .medium)
+        switch effectiveProminence {
+        case .primary, .active: return .system(size: 14, weight: .semibold)
+        case .normal:           return .system(size: 12, weight: .medium)
+        case .subtle:           return .system(size: 11, weight: .medium)
         }
     }
 
     private var foreground: Color {
-        switch item.prominence {
-        case .primary: return .white
-        case .normal, .subtle: return .primary
+        switch effectiveProminence {
+        case .primary, .active: return .white
+        case .normal, .subtle:  return .primary
         }
     }
 }
@@ -319,6 +333,8 @@ private struct PressReleaseCommandButtonBody: View {
         switch prominence {
         case .primary:
             return configuration.isPressed ? Color.accentColor.opacity(0.82) : Color.accentColor
+        case .active:
+            return configuration.isPressed ? Color.green.opacity(0.82) : Color.green
         case .normal:
             return configuration.isPressed ? Color(.systemGray4) : Color(.secondarySystemBackground)
         case .subtle:

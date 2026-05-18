@@ -18,6 +18,7 @@
 		537187D6D50E185FF00D3777 /* ChairBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AA7F67546DAFFDFCE2819A5 /* ChairBLEManager.swift */; };
 		7BE69440439E56B5D9EDBD44 /* CommandCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 706AB9AEDAAF48E4569B10F9 /* CommandCatalog.swift */; };
 		7BFF538990EBC8ACF32CE373 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A355DC1C61B7E9323E86928 /* Assets.xcassets */; };
+		8223B20AAA2D78E2FCBD90DA /* ControlState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7EC367F4DB5F5084B9D7D66 /* ControlState.swift */; };
 		96D830466686A32DA6577A69 /* DevToolsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 342B94D309B5226E34BDB84D /* DevToolsSheet.swift */; };
 		A046A6720042C7C1FA95945F /* DecodedStatusScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30236C6CDB67563E78146000 /* DecodedStatusScreen.swift */; };
 		AB20F5FFE5CFFB82E0593FB5 /* RawFeedScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BE87288976799BC075D04F /* RawFeedScreen.swift */; };
@@ -46,6 +47,7 @@
 		B1E6EA5B3F5FA09DD4DCAF5C /* ConnectionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPanel.swift; sourceTree = "<group>"; };
 		BDEDEF5052F3D8E00D2AD16C /* RemoteCommandPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCommandPad.swift; sourceTree = "<group>"; };
 		C3520CFADC1FE28BFC27CACF /* HeroStatusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroStatusCard.swift; sourceTree = "<group>"; };
+		C7EC367F4DB5F5084B9D7D66 /* ControlState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlState.swift; sourceTree = "<group>"; };
 		CB2666168918D88AB8B959CD /* ViewStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewStyles.swift; sourceTree = "<group>"; };
 		CC904DEEDADDB16EDF688436 /* ChairDecode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairDecode.swift; sourceTree = "<group>"; };
 		CED4EBD8C059C7C8899B468F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -111,6 +113,7 @@
 		E294ECBE04175A18AA4286C2 /* Remote */ = {
 			isa = PBXGroup;
 			children = (
+				C7EC367F4DB5F5084B9D7D66 /* ControlState.swift */,
 				C3520CFADC1FE28BFC27CACF /* HeroStatusCard.swift */,
 				BDEDEF5052F3D8E00D2AD16C /* RemoteCommandPad.swift */,
 				43FC23809D1F075C31649CB3 /* RemoteView.swift */,
@@ -207,6 +210,7 @@
 				489A29EB8BE2CB784F5B206E /* ConnectionBanner.swift in Sources */,
 				B323994E82883F26E68580A3 /* ConnectionPanel.swift in Sources */,
 				E80F6D8B127D1F4A4626B8FD /* ContentView.swift in Sources */,
+				8223B20AAA2D78E2FCBD90DA /* ControlState.swift in Sources */,
 				2C31D721A48E4EEAE6E9F2EA /* CustomHexScreen.swift in Sources */,
 				A046A6720042C7C1FA95945F /* DecodedStatusScreen.swift in Sources */,
 				96D830466686A32DA6577A69 /* DevToolsSheet.swift in Sources */,

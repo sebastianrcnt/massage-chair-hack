@@ -10,7 +10,12 @@ struct RemoteView: View {
                     HeroStatusCard(ble: ble)
                         .frame(maxWidth: heroWidth(for: geo.size.width))
 
-                    RemoteCommandPad(availableWidth: geo.size.width) { code in
+                    RemoteCommandPad(
+                        availableWidth: geo.size.width,
+                        liveState: { code in
+                            LiveStateLookup.state(for: code, ble: ble)
+                        }
+                    ) { code in
                         ble.send(command: code)
                     } onRelease: {
                         ble.send(command: "0355")

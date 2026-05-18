@@ -39,92 +39,97 @@ struct RemoteCommandPad: View {
         max((padWidth - 38) / 2, 128)
     }
 
-    private let power = ControlItem(code: "0303", label: "Power", icon: "power", prominence: .primary)
-    private let pause = ControlItem(code: "0322", label: "Pause", icon: "playpause", prominence: .primary)
-    private let timer = ControlItem(code: "032D", label: "Timer", icon: "timer")
-    private let heater = ControlItem(code: "0330", label: "Heater", icon: "heat.waves")
-    private let speed = ControlItem(code: "0327", label: "Speed", icon: "speedometer")
-    private let manual = ControlItem(code: "0363", label: "Manual", icon: "slider.horizontal.3")
-    private let backRaise = ControlItem(code: "0302", label: "Back Up", icon: "chevron.up")
-    private let backRecline = ControlItem(code: "0304", label: "Back Down", icon: "chevron.down")
-    private let legRaise = ControlItem(code: "0307", label: "Leg Up", icon: "chevron.up")
-    private let legLower = ControlItem(code: "0301", label: "Leg Down", icon: "chevron.down")
-    private let zeroG = ControlItem(code: "0306", label: "Zero G", icon: "figure.flexibility", prominence: .primary)
-    private let width = ControlItem(code: "0364", label: "Width", icon: "arrow.left.and.right")
-    private let footRoller = ControlItem(code: "0331", label: "Foot", icon: "circle.dotted")
-    private let air = ControlItem(code: "0375", label: "Air", icon: "wind")
-    private let airLevel = ControlItem(code: "0315", label: "Air Level", icon: "gauge.medium")
-    private let posUp = ControlItem(code: "032C", label: "Pos Up", icon: "arrow.up")
-    private let posDown = ControlItem(code: "032F", label: "Pos Down", icon: "arrow.down")
-    private let reset = ControlItem(code: "0384", label: "Reset", icon: "arrow.counterclockwise")
+    private let power  = ControlItem(code: "0303", label: "전원",     icon: "power",               prominence: .primary)
+    private let pause  = ControlItem(code: "0322", label: "일시정지", icon: "playpause",           prominence: .primary)
+    private let timer  = ControlItem(code: "032D", label: "타이머",   icon: "timer")
+    private let heater = ControlItem(code: "0330", label: "온열",     icon: "heat.waves")
+    private let manual = ControlItem(code: "0363", label: "수동",     icon: "slider.horizontal.3")
+
+    private let backRaise   = ControlItem(code: "0302", label: "등받이 ↑", icon: "chevron.up")
+    private let backRecline = ControlItem(code: "0304", label: "등받이 ↓", icon: "chevron.down")
+    private let legRaise    = ControlItem(code: "0307", label: "다리 ↑",  icon: "chevron.up")
+    private let legLower    = ControlItem(code: "0301", label: "다리 ↓",  icon: "chevron.down")
+
+    private let zeroG = ControlItem(code: "0306", label: "무중력", icon: "figure.flexibility",   prominence: .primary)
+    private let reset = ControlItem(code: "0384", label: "원위치", icon: "arrow.counterclockwise", prominence: .primary)
+
+    private let speed      = ControlItem(code: "0327", label: "속도",   icon: "speedometer")
+    private let width      = ControlItem(code: "0364", label: "폭",     icon: "arrow.left.and.right")
+    private let footRoller = ControlItem(code: "0331", label: "발롤러", icon: "circle.dotted")
+    private let air        = ControlItem(code: "0375", label: "에어백",   icon: "bubble.left.and.bubble.right.fill")
+    private let airLevel   = ControlItem(code: "0315", label: "에어 세기", icon: "gauge.medium")
+
+    private let headUp   = ControlItem(code: "032C", label: "헤드 ↑", icon: "arrow.up")
+    private let headDown = ControlItem(code: "032F", label: "헤드 ↓", icon: "arrow.down")
+
     private let autoModes = [
-        ControlItem(code: "031F", label: "충전", icon: "battery.100"),
-        ControlItem(code: "0391", label: "소화", icon: "sparkles"),
-        ControlItem(code: "0305", label: "클래식", icon: "music.note"),
-        ControlItem(code: "0321", label: "숙면", icon: "moon"),
+        ControlItem(code: "031F", label: "충전",     icon: "battery.100"),
+        ControlItem(code: "0391", label: "소화",     icon: "sparkles"),
+        ControlItem(code: "0305", label: "클래식",   icon: "music.note"),
+        ControlItem(code: "0321", label: "숙면",     icon: "moon"),
         ControlItem(code: "031E", label: "스트레칭", icon: "figure.cooldown"),
-        ControlItem(code: "0320", label: "힐링", icon: "heart")
+        ControlItem(code: "0320", label: "힐링",     icon: "heart")
     ]
 
     var body: some View {
-        VStack(spacing: 12) {
-            VStack(spacing: 14) {
+        VStack(spacing: 14) {
+            // Primary controls
+            HStack(spacing: 10) {
+                ControlCommandButton(item: power, minHeight: 58, onPress: onPress, onRelease: onRelease)
+                ControlCommandButton(item: pause, minHeight: 58, onPress: onPress, onRelease: onRelease)
+            }
+
+            HStack(spacing: 10) {
+                compactButton(timer)
+                compactButton(heater)
+                compactButton(manual)
+            }
+
+            remoteDivider
+
+            // Posture (back + leg)
+            HStack(alignment: .top, spacing: 10) {
+                verticalPair(title: "등받이", top: backRaise, bottom: backRecline)
+                verticalPair(title: "다리",  top: legRaise,  bottom: legLower)
+            }
+            .frame(maxWidth: .infinity)
+
+            // Posture presets (Zero G + Reset)
+            section(title: "자세 프리셋") {
                 HStack(spacing: 10) {
-                    ControlCommandButton(
-                        item: power,
-                        minHeight: 58,
-                        onPress: onPress,
-                        onRelease: onRelease
-                    )
-                    ControlCommandButton(
-                        item: pause,
-                        minHeight: 58,
-                        onPress: onPress,
-                        onRelease: onRelease
-                    )
+                    wideButton(zeroG)
+                    wideButton(reset)
                 }
+            }
 
+            remoteDivider
+
+            // Massage tuning
+            HStack(spacing: 10) {
+                compactButton(speed)
+                compactButton(width)
+                compactButton(footRoller)
+            }
+
+            HStack(spacing: 10) {
+                wideButton(air)
+                wideButton(airLevel)
+            }
+
+            remoteDivider
+
+            // Massage head (manual-only)
+            section(title: "마사지 헤드 · 수동 전용") {
                 HStack(spacing: 10) {
-                    compactButton(timer)
-                    compactButton(heater)
-                    compactButton(manual)
+                    wideButton(headUp)
+                    wideButton(headDown)
                 }
+            }
 
-                remoteDivider
+            remoteDivider
 
-                HStack(alignment: .center, spacing: 10) {
-                    verticalPair(title: "Back", top: backRaise, bottom: backRecline)
-                    ControlCommandButton(
-                        item: zeroG,
-                        minHeight: 86,
-                        onPress: onPress,
-                        onRelease: onRelease
-                    )
-                    .frame(width: sideButtonWidth)
-                    verticalPair(title: "Leg", top: legRaise, bottom: legLower)
-                }
-
-                remoteDivider
-
-                HStack(spacing: 10) {
-                    compactButton(speed)
-                    compactButton(width)
-                    compactButton(footRoller)
-                }
-
-                HStack(spacing: 10) {
-                    wideButton(air)
-                    wideButton(airLevel)
-                }
-
-                HStack(spacing: 10) {
-                    compactButton(posUp)
-                    compactButton(posDown)
-                    compactButton(reset)
-                }
-
-                remoteDivider
-
+            // Auto modes
+            section(title: "오토 모드") {
                 LazyVGrid(
                     columns: [
                         GridItem(.flexible(), spacing: 10),
@@ -133,19 +138,14 @@ struct RemoteCommandPad: View {
                     spacing: 10
                 ) {
                     ForEach(autoModes) { item in
-                        ControlCommandButton(
-                            item: item,
-                            minHeight: 48,
-                            onPress: onPress,
-                            onRelease: onRelease
-                        )
+                        ControlCommandButton(item: item, minHeight: 48, onPress: onPress, onRelease: onRelease)
                     }
                 }
             }
-            .padding(14)
-            .frame(width: padWidth)
-            .background(remoteBodyBackground)
         }
+        .padding(14)
+        .frame(width: padWidth)
+        .background(remoteBodyBackground)
     }
 
     private var remoteBodyBackground: some View {
@@ -171,24 +171,26 @@ struct RemoteCommandPad: View {
             .padding(.horizontal, 8)
     }
 
+    private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.none)
+                .padding(.leading, 4)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func compactButton(_ item: ControlItem) -> some View {
-        ControlCommandButton(
-            item: item,
-            minHeight: 54,
-            onPress: onPress,
-            onRelease: onRelease
-        )
-        .frame(width: sideButtonWidth)
+        ControlCommandButton(item: item, minHeight: 54, onPress: onPress, onRelease: onRelease)
+            .frame(width: sideButtonWidth)
     }
 
     private func wideButton(_ item: ControlItem) -> some View {
-        ControlCommandButton(
-            item: item,
-            minHeight: 54,
-            onPress: onPress,
-            onRelease: onRelease
-        )
-        .frame(width: halfButtonWidth)
+        ControlCommandButton(item: item, minHeight: 54, onPress: onPress, onRelease: onRelease)
+            .frame(width: halfButtonWidth)
     }
 
     private func verticalPair(title: String, top: ControlItem, bottom: ControlItem) -> some View {
@@ -196,20 +198,10 @@ struct RemoteCommandPad: View {
             Text(title)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)
-            ControlCommandButton(
-                item: top,
-                minHeight: 46,
-                onPress: onPress,
-                onRelease: onRelease
-            )
-            ControlCommandButton(
-                item: bottom,
-                minHeight: 46,
-                onPress: onPress,
-                onRelease: onRelease
-            )
+            ControlCommandButton(item: top, minHeight: 46, onPress: onPress, onRelease: onRelease)
+            ControlCommandButton(item: bottom, minHeight: 46, onPress: onPress, onRelease: onRelease)
         }
-        .frame(width: sideButtonWidth)
+        .frame(maxWidth: halfButtonWidth)
     }
 }
 
@@ -250,16 +242,16 @@ private struct ControlCommandButton: View {
     private var iconFont: Font {
         switch item.prominence {
         case .primary: return .title3.weight(.semibold)
-        case .normal: return .body.weight(.semibold)
-        case .subtle: return .callout.weight(.semibold)
+        case .normal:  return .body.weight(.semibold)
+        case .subtle:  return .callout.weight(.semibold)
         }
     }
 
     private var labelFont: Font {
         switch item.prominence {
         case .primary: return .system(size: 14, weight: .semibold)
-        case .normal: return .system(size: 12, weight: .medium)
-        case .subtle: return .system(size: 11, weight: .medium)
+        case .normal:  return .system(size: 12, weight: .medium)
+        case .subtle:  return .system(size: 11, weight: .medium)
         }
     }
 

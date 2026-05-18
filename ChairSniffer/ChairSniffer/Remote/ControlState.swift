@@ -13,6 +13,8 @@ enum LiveStateLookup {
         switch code.uppercased() {
         case "032D":
             return timerState(decoded.timer)
+        case "0363":
+            return ControlState(isOn: ble.isManualMode, label: ble.manualTechnique)
         case "0330":
             return toggleState(decoded.heater)
         case "0375":

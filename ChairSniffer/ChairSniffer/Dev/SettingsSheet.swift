@@ -4,6 +4,7 @@ struct SettingsSheet: View {
     @ObservedObject var ble: ChairBLEManager
     @Binding var isPresented: Bool
     @State private var showBluetoothSheet = false
+    @State private var showDisconnectConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -24,7 +25,22 @@ struct SettingsSheet: View {
             .sheet(isPresented: $showBluetoothSheet) {
                 DevicePickerSheet(ble: ble, isPresented: $showBluetoothSheet)
             }
+            .confirmationDialog(
+                disconnectPrompt,
+                isPresented: $showDisconnectConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Disconnect", role: .destructive) { ble.disconnect() }
+                Button("Cancel", role: .cancel) {}
+            }
         }
+    }
+
+    private var disconnectPrompt: String {
+        if let name = connectedDeviceName {
+            return "Disconnect from \(name)?"
+        }
+        return "Disconnect?"
     }
 
     // MARK: - Sections
@@ -68,6 +84,15 @@ struct SettingsSheet: View {
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .labelStyle(.titleAndIcon)
+            }
+
+            if ble.isConnected {
+                Button(role: .destructive) {
+                    showDisconnectConfirm = true
+                } label: {
+                    Text("Disconnect")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
     }

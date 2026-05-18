@@ -65,6 +65,11 @@ final class ChairBLEManager: NSObject, ObservableObject {
     /// Cleared on failure, intentional disconnect, or unintentional drop.
     @Published var activeDeviceId: UUID?
 
+    /// `true` while the chair's long status reports manual mode (B5[b5:b4] == 00).
+    @Published var isManualMode: Bool = false
+    /// Most-recently observed blinking manual technique (e.g. "주무름"), or nil when none active.
+    @Published var manualTechnique: String?
+
     private static let autoModeCodes: [String: String] = [
         "031F": "충전",
         "0391": "소화",
@@ -73,6 +78,22 @@ final class ChairBLEManager: NSObject, ObservableObject {
         "031E": "스트레칭",
         "0320": "힐링",
     ]
+
+    /// (name, byte index, bit mask). Each bit defaults to 1 and blinks 0/1 while its technique is active.
+    private static let manualTechniqueBits: [(name: String, byteIndex: Int, mask: UInt8)] = [
+        ("주무름",      4, 1 << 6),  // B4[b6]
+        ("지압",        4, 1 << 7),  // B4[b7]
+        ("두드림",      5, 1 << 1),  // B5[b1]
+        ("손날 두드림",  5, 1 << 2),  // B5[b2]
+        ("시아추",      5, 1 << 0),  // B5[b0]
+        ("복합",        5, 1 << 3),  // B5[b3]
+    ]
+
+    /// How long after observing a `0` on a manual-blink bit we consider that technique active.
+    /// Chair pushes long status ~2x/sec; a 1.5 s window catches at least one blink low.
+    private static let manualBlinkWindow: TimeInterval = 1.5
+
+    private var manualBitLastZero: [String: Date] = [:]
 
     private let serviceUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abc")
     private let dataUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abd")
@@ -220,6 +241,51 @@ final class ChairBLEManager: NSObject, ObservableObject {
         sentCount = 0
         currentAutoMode = nil
         hasReceivedFirstNotification = false
+        manualBitLastZero.removeAll()
+        isManualMode = false
+        manualTechnique = nil
+    }
+
+    /// Inspects a long-status hex string and updates `isManualMode` /
+    /// `manualTechnique` based on the manual-mode indicator (B5[b5:b4] == 00)
+    /// and which technique-blink bit (B4[b7], B4[b6], B5[b0..b3]) most recently
+    /// read 0 within the blink window.
+    private func updateManualState(from longHex: String) {
+        let bytes = ChairDecode.bytes(from: longHex)
+        guard bytes.count >= 6,
+              let b5 = UInt8(bytes[5], radix: 16) else { return }
+
+        let inManual = ((b5 >> 4) & 0b11) == 0
+
+        if !inManual {
+            if isManualMode || manualTechnique != nil || !manualBitLastZero.isEmpty {
+                manualBitLastZero.removeAll()
+                isManualMode = false
+                manualTechnique = nil
+            }
+            return
+        }
+
+        // Just transitioned into manual — flush any stale observations from auto mode.
+        if !isManualMode {
+            manualBitLastZero.removeAll()
+            isManualMode = true
+        }
+
+        let now = Date()
+        for entry in Self.manualTechniqueBits {
+            guard bytes.indices.contains(entry.byteIndex),
+                  let value = UInt8(bytes[entry.byteIndex], radix: 16) else { continue }
+            if value & entry.mask == 0 {
+                manualBitLastZero[entry.name] = now
+            }
+        }
+
+        let cutoff = now.addingTimeInterval(-Self.manualBlinkWindow)
+        let mostRecent = manualBitLastZero
+            .filter { $0.value > cutoff }
+            .max { $0.value < $1.value }
+        manualTechnique = mostRecent?.key
     }
 
     private func appendRaw(_ kind: ChairLogEntry.Kind, _ text: String) {
@@ -275,6 +341,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
             let payload = String(text.dropFirst(8))
             if payload.count > 12 {
                 latestLong = payload
+                updateManualState(from: payload)
             } else if payload.count > 5 {
                 latestShort = payload
             } else {

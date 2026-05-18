@@ -42,6 +42,7 @@ private struct PhoneLayout: View {
             NavigationStack {
                 StatusContent(ble: ble, showConnection: true)
                     .navigationTitle("Chair Monitor")
+                    .navigationBarTitleDisplayMode(.inline)
             }
             .tabItem { Label("Status", systemImage: "gauge.with.dots.needle.bottom.50percent") }
 
@@ -263,202 +264,143 @@ private struct StatusContent: View {
     }
 }
 
-// MARK: - Commands content (iMessage-style)
+// MARK: - Commands content (control panel + compact chat log)
 
 private struct CommandsContent: View {
     @ObservedObject var ble: ChairBLEManager
-    @State private var command = ""
 
     var body: some View {
         VStack(spacing: 0) {
-            chatList
-            Divider()
-            cheatSheet
-                .padding(.vertical, 8)
+            recentActivity
+                .frame(height: 180)
                 .background(Color(.secondarySystemBackground))
             Divider()
-            composer
-                .padding(.horizontal, 12)
-                .padding(.top, 10)
-                .padding(.bottom, 8)
-                .background(Color(.systemBackground))
+            controlsArea
         }
         .background(Color(.systemGroupedBackground))
     }
 
-    private var chatList: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                if ble.commandLogs.isEmpty {
-                    emptyState
-                        .frame(maxWidth: .infinity, minHeight: 240)
-                } else {
-                    LazyVStack(alignment: .leading, spacing: 6) {
-                        ForEach(ble.commandLogs) { entry in
-                            ChatBubble(entry: entry)
-                                .id(entry.id)
+    private var recentActivity: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Recent")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if ble.commandLogs.isEmpty {
+                        Text("No messages yet — tap a control or send a custom hex.")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 36)
+                            .padding(.horizontal, 24)
+                            .multilineTextAlignment(.center)
+                    } else {
+                        LazyVStack(alignment: .leading, spacing: 3) {
+                            ForEach(ble.commandLogs) { entry in
+                                ChatBubble(entry: entry)
+                                    .id(entry.id)
+                            }
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 8)
+                    }
+                }
+                .onChange(of: ble.commandLogs.count) { _, _ in
+                    if let last = ble.commandLogs.last {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var controlsArea: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                ForEach(ControlSection.all) { section in
+                    ControlSectionView(section: section) { code in
+                        ble.send(command: code)
+                    }
+                }
+
+                NavigationLink {
+                    CustomHexScreen(ble: ble)
+                } label: {
+                    HStack {
+                        Image(systemName: "keyboard")
+                            .foregroundStyle(.tint)
+                        Text("Send Custom Hex Command")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                 }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
             }
-            .onChange(of: ble.commandLogs.count) { _, _ in
-                if let last = ble.commandLogs.last {
-                    withAnimation(.easeOut(duration: 0.18)) {
-                        proxy.scrollTo(last.id, anchor: .bottom)
-                    }
-                }
-            }
+            .padding(.top, 16)
         }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 36))
-                .foregroundStyle(.tertiary)
-            Text("No commands yet")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-            Text("Press a chair button or send a hex code below.")
-                .font(.footnote)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(20)
-    }
-
-    private var cheatSheet: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(CommandCatalog.cheatSheet, id: \.code) { item in
-                    Button { command = item.code } label: {
-                        VStack(spacing: 1) {
-                            Text(item.code)
-                                .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Text(item.label)
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(.separator), lineWidth: 0.5)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 14)
-        }
-    }
-
-    private var composer: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Text(commandDisplay)
-                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
-                    .frame(maxWidth: .infinity, minHeight: 40, alignment: .center)
-                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
-                    .accessibilityLabel("Command \(commandDisplay)")
-
-                Button { command = String(command.dropLast()) } label: {
-                    Image(systemName: "delete.left").frame(width: 26, height: 26)
-                }
-                .buttonStyle(.bordered)
-                .disabled(command.isEmpty)
-
-                Button(action: sendCommand) {
-                    Image(systemName: "paperplane.fill").frame(width: 26, height: 26)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!ChairDecode.isFourDigitHex(command))
-            }
-            HexKeypadCompact(command: $command)
-        }
-    }
-
-    private var normalizedCommand: String {
-        command.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-    }
-
-    private var commandDisplay: String {
-        let trimmed = normalizedCommand
-        let placeholder = String(repeating: "_", count: max(0, 4 - trimmed.count))
-        return trimmed + placeholder
-    }
-
-    private func sendCommand() {
-        let value = normalizedCommand
-        ble.send(command: value)
-        if ChairDecode.isFourDigitHex(value) { command = "" }
     }
 }
 
-// MARK: - Chat bubble
+// MARK: - Compact chat bubble (one-line)
 
 private struct ChatBubble: View {
     let entry: ChairCommandEntry
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
+        HStack(alignment: .center, spacing: 6) {
             if entry.direction == .appToChair {
-                Spacer(minLength: 48)
+                Spacer(minLength: 30)
+                timeLabel
                 bubble
             } else if entry.direction == .error {
                 bubble
                     .frame(maxWidth: .infinity)
             } else {
                 bubble
-                Spacer(minLength: 48)
+                timeLabel
+                Spacer(minLength: 30)
             }
         }
     }
 
     private var bubble: some View {
-        VStack(alignment: bubbleAlignment, spacing: 3) {
-            HStack(spacing: 6) {
-                Text(entry.title)
-                    .font(.callout.weight(.semibold))
-                    .lineLimit(2)
-                if let subtitle = entry.subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 9, weight: .semibold))
-                        .opacity(0.75)
-                }
-            }
-            if let note = entry.note {
-                Text(note)
-                    .font(.caption2)
-                    .opacity(0.7)
-            }
-            HStack(spacing: 6) {
-                if !entry.code.isEmpty {
-                    Text(entry.code)
-                        .font(.system(.caption, design: .monospaced).weight(.medium))
-                        .opacity(0.85)
-                }
-                Text(timeString)
-                    .font(.caption2.monospacedDigit())
-                    .opacity(0.55)
+        HStack(spacing: 6) {
+            Text(entry.title)
+                .font(.system(size: 12, weight: .medium))
+                .lineLimit(1)
+            if !entry.code.isEmpty {
+                Text(entry.code)
+                    .font(.system(size: 10, design: .monospaced))
+                    .opacity(0.75)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(bubbleBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(bubbleBackground, in: Capsule())
         .foregroundStyle(foreground)
     }
 
-    private var bubbleAlignment: HorizontalAlignment {
-        entry.direction == .appToChair ? .trailing : .leading
-    }
-
-    private var timeString: String {
-        entry.date.formatted(date: .omitted, time: .standard)
+    private var timeLabel: some View {
+        Text(entry.date.formatted(date: .omitted, time: .shortened))
+            .font(.system(size: 9).monospacedDigit())
+            .foregroundStyle(.tertiary)
     }
 
     private var bubbleBackground: Color {
@@ -478,33 +420,216 @@ private struct ChatBubble: View {
     }
 }
 
-// MARK: - Hex keypad (compact, inline)
+// MARK: - Control panel data
 
-private struct HexKeypadCompact: View {
-    @Binding var command: String
+private struct ControlItem: Identifiable {
+    let id = UUID()
+    let code: String
+    let label: String
+    let icon: String?
+}
 
-    private let rows = [
-        ["0", "1", "2", "3"],
-        ["4", "5", "6", "7"],
-        ["8", "9", "A", "B"],
-        ["C", "D", "E", "F"],
+private struct ControlSection: Identifiable {
+    let id: String
+    let title: String
+    let items: [ControlItem]
+
+    static let all: [ControlSection] = [
+        ControlSection(id: "power", title: "Power & Timing", items: [
+            ControlItem(code: "0303", label: "Power",   icon: "power"),
+            ControlItem(code: "0322", label: "Pause",   icon: "playpause"),
+            ControlItem(code: "032D", label: "Timer",   icon: "timer"),
+            ControlItem(code: "0330", label: "Heater",  icon: "heat.waves"),
+            ControlItem(code: "0327", label: "Speed",   icon: "speedometer"),
+            ControlItem(code: "0363", label: "Manual",  icon: "slider.horizontal.3"),
+        ]),
+        ControlSection(id: "posture", title: "Posture", items: [
+            ControlItem(code: "0302", label: "Back ↑",  icon: nil),
+            ControlItem(code: "0304", label: "Back ↓",  icon: nil),
+            ControlItem(code: "0307", label: "Leg ↑",   icon: nil),
+            ControlItem(code: "0301", label: "Leg ↓",   icon: nil),
+            ControlItem(code: "0306", label: "Zero G",  icon: "figure.flexibility"),
+        ]),
+        ControlSection(id: "massage", title: "Massage", items: [
+            ControlItem(code: "0364", label: "Width",       icon: "arrow.left.and.right"),
+            ControlItem(code: "0331", label: "Foot Roller", icon: "circle.dotted"),
+            ControlItem(code: "0375", label: "Air",         icon: "wind"),
+            ControlItem(code: "0315", label: "Air Level",   icon: "gauge.medium"),
+        ]),
+        ControlSection(id: "position", title: "Massage Position", items: [
+            ControlItem(code: "032C", label: "Pos ↑", icon: nil),
+            ControlItem(code: "032F", label: "Pos ↓", icon: nil),
+            ControlItem(code: "0384", label: "Reset", icon: "arrow.counterclockwise"),
+        ]),
+        ControlSection(id: "auto", title: "Auto Modes", items: [
+            ControlItem(code: "031F", label: "충전",     icon: nil),
+            ControlItem(code: "0391", label: "소화",     icon: nil),
+            ControlItem(code: "0305", label: "클래식",   icon: nil),
+            ControlItem(code: "0321", label: "숙면",     icon: nil),
+            ControlItem(code: "031E", label: "스트레칭", icon: nil),
+            ControlItem(code: "0320", label: "힐링",     icon: nil),
+        ]),
     ]
+}
+
+private struct ControlSectionView: View {
+    let section: ControlSection
+    let onTap: (String) -> Void
 
     var body: some View {
-        VStack(spacing: 6) {
-            ForEach(rows, id: \.self) { row in
-                HStack(spacing: 6) {
-                    ForEach(row, id: \.self) { digit in
-                        Button { append(digit) } label: {
-                            Text(digit)
-                                .font(.system(size: 18, weight: .semibold, design: .monospaced))
-                                .frame(maxWidth: .infinity, minHeight: 38)
+        VStack(alignment: .leading, spacing: 8) {
+            Text(section.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 16)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100), spacing: 8)], spacing: 8) {
+                ForEach(section.items) { item in
+                    Button { onTap(item.code) } label: {
+                        VStack(spacing: 4) {
+                            if let icon = item.icon {
+                                Image(systemName: icon)
+                                    .font(.body)
+                                    .foregroundStyle(.tint)
+                            }
+                            Text(item.label)
+                                .font(.system(size: 13, weight: .medium))
+                                .lineLimit(1)
+                                .foregroundStyle(.primary)
+                            Text(item.code)
+                                .font(.system(size: 9, design: .monospaced))
+                                .foregroundStyle(.secondary)
                         }
-                        .buttonStyle(.bordered)
+                        .frame(maxWidth: .infinity, minHeight: 64)
+                        .padding(.vertical, 8)
+                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
                     }
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, 14)
         }
+    }
+}
+
+// MARK: - Custom hex sub-screen
+
+private struct CustomHexScreen: View {
+    @ObservedObject var ble: ChairBLEManager
+    @State private var command = ""
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                HStack(spacing: 10) {
+                    Text(commandDisplay)
+                        .font(.system(size: 34, weight: .semibold, design: .monospaced))
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Color(.secondarySystemBackground),
+                                    in: RoundedRectangle(cornerRadius: 10))
+
+                    Button { command = String(command.dropLast()) } label: {
+                        Image(systemName: "delete.left").frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(command.isEmpty)
+
+                    Button(action: sendCommand) {
+                        Image(systemName: "paperplane.fill").frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!ChairDecode.isFourDigitHex(command))
+                }
+
+                Text(commandDescription)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                HexKeypadFull(command: $command)
+            }
+            .padding(20)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Custom Hex")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var normalizedCommand: String {
+        command.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }
+
+    private var commandDisplay: String {
+        let trimmed = normalizedCommand
+        let placeholder = String(repeating: "_", count: max(0, 4 - trimmed.count))
+        return trimmed + placeholder
+    }
+
+    private var commandDescription: String {
+        guard ChairDecode.isFourDigitHex(normalizedCommand) else {
+            return command.isEmpty ? "Enter a 4-digit hex command." : "Need \(4 - normalizedCommand.count) more digit(s)."
+        }
+        if let info = CommandCatalog.describe(normalizedCommand) {
+            let role = info.role.rawValue
+            if let note = info.note { return "\(info.name) — \(role) (\(note))" }
+            return "\(info.name) — \(role)"
+        }
+        return "Unknown command (will still send to chair)."
+    }
+
+    private func sendCommand() {
+        let value = normalizedCommand
+        ble.send(command: value)
+        if ChairDecode.isFourDigitHex(value) { command = "" }
+    }
+}
+
+// MARK: - Hex keypad (full, phone numpad + A-F section)
+
+private struct HexKeypadFull: View {
+    @Binding var command: String
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+
+    var body: some View {
+        VStack(spacing: 16) {
+            digitsPad
+            VStack(spacing: 6) {
+                Text("LETTERS")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                lettersPad
+            }
+        }
+    }
+
+    private var digitsPad: some View {
+        LazyVGrid(columns: columns, spacing: 8) {
+            key("1"); key("2"); key("3")
+            key("4"); key("5"); key("6")
+            key("7"); key("8"); key("9")
+            Color.clear.frame(minHeight: 52)
+            key("0")
+            Color.clear.frame(minHeight: 52)
+        }
+    }
+
+    private var lettersPad: some View {
+        LazyVGrid(columns: columns, spacing: 8) {
+            key("A"); key("B"); key("C")
+            key("D"); key("E"); key("F")
+        }
+    }
+
+    private func key(_ digit: String) -> some View {
+        Button { append(digit) } label: {
+            Text(digit)
+                .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                .frame(maxWidth: .infinity, minHeight: 52)
+        }
+        .buttonStyle(.bordered)
     }
 
     private func append(_ digit: String) {

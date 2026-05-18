@@ -65,7 +65,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     /// Cleared on failure, intentional disconnect, or unintentional drop.
     @Published var activeDeviceId: UUID?
 
-    /// `true` while the chair's long status reports manual mode (B5[b5:b4] == 00).
+    /// `true` while the chair's long status reports manual mode (B4[b5:b4] == 00).
     @Published var isManualMode: Bool = false
     /// Most-recently observed blinking manual technique (e.g. "주무름"), or nil when none active.
     @Published var manualTechnique: String?
@@ -81,12 +81,12 @@ final class ChairBLEManager: NSObject, ObservableObject {
 
     /// (name, byte index, bit mask). Each bit defaults to 1 and blinks 0/1 while its technique is active.
     private static let manualTechniqueBits: [(name: String, byteIndex: Int, mask: UInt8)] = [
-        ("주무름",      4, 1 << 6),  // B4[b6]
-        ("지압",        4, 1 << 7),  // B4[b7]
-        ("두드림",      5, 1 << 1),  // B5[b1]
-        ("손날 두드림",  5, 1 << 2),  // B5[b2]
-        ("시아추",      5, 1 << 0),  // B5[b0]
-        ("복합",        5, 1 << 3),  // B5[b3]
+        ("주무름",      3, 1 << 6),  // B3[b6]
+        ("지압",        3, 1 << 7),  // B3[b7]
+        ("두드림",      4, 1 << 1),  // B4[b1]
+        ("손날 두드림",  4, 1 << 2),  // B4[b2]
+        ("시아추",      4, 1 << 0),  // B4[b0]
+        ("복합",        4, 1 << 3),  // B4[b3]
     ]
 
     /// How long after observing a `0` on a manual-blink bit we consider that technique active.
@@ -247,15 +247,15 @@ final class ChairBLEManager: NSObject, ObservableObject {
     }
 
     /// Inspects a long-status hex string and updates `isManualMode` /
-    /// `manualTechnique` based on the manual-mode indicator (B5[b5:b4] == 00)
-    /// and which technique-blink bit (B4[b7], B4[b6], B5[b0..b3]) most recently
+    /// `manualTechnique` based on the manual-mode indicator (B4[b5:b4] == 00)
+    /// and which technique-blink bit (B3[b7], B3[b6], B4[b0..b3]) most recently
     /// read 0 within the blink window.
     private func updateManualState(from longHex: String) {
         let bytes = ChairDecode.bytes(from: longHex)
-        guard bytes.count >= 6,
-              let b5 = UInt8(bytes[5], radix: 16) else { return }
+        guard bytes.count >= 5,
+              let b4 = UInt8(bytes[4], radix: 16) else { return }
 
-        let inManual = ((b5 >> 4) & 0b11) == 0
+        let inManual = ((b4 >> 4) & 0b11) == 0
 
         if !inManual {
             if isManualMode || manualTechnique != nil || !manualBitLastZero.isEmpty {

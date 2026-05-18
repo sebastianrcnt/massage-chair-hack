@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Status indicator + Developer Tools entry, all in one tap.
-/// Color-coded by BLE health; tapping opens DevToolsSheet (which itself has
+/// Status indicator + Settings entry, all in one tap.
+/// Color-coded by BLE health; tapping opens SettingsSheet (which itself has
 /// connection management inside).
 struct StatusMenuButton: View {
     @ObservedObject var ble: ChairBLEManager

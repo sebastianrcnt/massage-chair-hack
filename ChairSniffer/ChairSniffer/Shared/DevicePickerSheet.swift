@@ -3,7 +3,6 @@ import SwiftUI
 struct DevicePickerSheet: View {
     @ObservedObject var ble: ChairBLEManager
     @Binding var isPresented: Bool
-    @AppStorage("scannerAutoRefresh") private var autoRefresh: Bool = true
 
     private let refreshTimer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
 
@@ -27,52 +26,42 @@ struct DevicePickerSheet: View {
             .navigationTitle("Bluetooth")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Done") {
-                        isPresented = false
-                    }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { isPresented = false }
+                        .fontWeight(.semibold)
                 }
             }
             .onAppear {
-                if ble.isBluetoothReady && !ble.isConnected && !ble.isScanning {
+                if !ble.isConnected && !ble.isScanning {
                     ble.scan()
                 }
                 ble.refreshDeviceList()
             }
             .onReceive(refreshTimer) { _ in
-                if autoRefresh { ble.refreshDeviceList() }
+                ble.refreshDeviceList()
+            }
+            .onChange(of: ble.isConnected) { _, isConnected in
+                if isConnected {
+                    // Auto-dismiss once a device connects.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        isPresented = false
+                    }
+                }
             }
         }
     }
 
+    @ViewBuilder
     private var deviceList: some View {
         List {
-            Section {
-                Toggle(isOn: $autoRefresh) {
-                    Label("Auto-refresh", systemImage: "arrow.triangle.2.circlepath")
-                }
-                Button {
-                    ble.refreshDeviceList()
-                } label: {
-                    HStack {
-                        Label("Refresh now", systemImage: "arrow.clockwise")
-                        Spacer()
-                        if ble.isScanning {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                    }
-                }
-            } footer: {
-                Text(autoRefresh ? "List re-sorts every 5 seconds." : "List stays put until you refresh.")
-            }
-
             if !chairDevices.isEmpty {
                 Section("Chair Bridges") {
                     ForEach(chairDevices) { device in
-                        DeviceRow(name: device.name, isMatch: true) {
-                            ble.connect(device)
-                            isPresented = false
+                        DeviceRow(
+                            device: device,
+                            indicator: indicator(for: device)
+                        ) {
+                            tap(device)
                         }
                     }
                 }
@@ -81,9 +70,11 @@ struct DevicePickerSheet: View {
             if !otherDevices.isEmpty {
                 Section("Other Devices") {
                     ForEach(otherDevices) { device in
-                        DeviceRow(name: device.name, isMatch: false) {
-                            ble.connect(device)
-                            isPresented = false
+                        DeviceRow(
+                            device: device,
+                            indicator: indicator(for: device)
+                        ) {
+                            tap(device)
                         }
                     }
                 }
@@ -95,7 +86,7 @@ struct DevicePickerSheet: View {
                         Spacer()
                         VStack(spacing: 8) {
                             ProgressView()
-                            Text("Scanning for devices…")
+                            Text("Searching for devices…")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -106,6 +97,19 @@ struct DevicePickerSheet: View {
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    private func indicator(for device: DiscoveredDevice) -> DeviceRowIndicator {
+        if ble.activeDeviceId == device.id {
+            return ble.isConnected ? .connected : .connecting
+        }
+        return .none
+    }
+
+    private func tap(_ device: DiscoveredDevice) {
+        // No-op if already connected to this device; otherwise connect.
+        if ble.activeDeviceId == device.id && ble.isConnected { return }
+        ble.connect(device)
     }
 
     private var bluetoothUnavailable: some View {
@@ -128,26 +132,35 @@ struct DevicePickerSheet: View {
     }
 }
 
+private enum DeviceRowIndicator {
+    case none
+    case connecting
+    case connected
+}
+
 private struct DeviceRow: View {
-    let name: String
-    let isMatch: Bool
+    let device: DiscoveredDevice
+    let indicator: DeviceRowIndicator
     let onSelect: () -> Void
 
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 10) {
-                if isMatch {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(.tint)
-                        .font(.body)
-                }
-                Text(name)
+                Text(device.name)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.tertiary)
-                    .font(.caption.weight(.semibold))
+                switch indicator {
+                case .none:
+                    EmptyView()
+                case .connecting:
+                    ProgressView()
+                        .controlSize(.small)
+                case .connected:
+                    Circle()
+                        .fill(.green)
+                        .frame(width: 10, height: 10)
+                }
             }
         }
         .buttonStyle(.plain)

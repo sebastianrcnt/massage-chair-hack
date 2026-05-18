@@ -19,7 +19,7 @@ struct ContentView: View {
         .tint(.chairTint)
         .tabBarMinimizeBehavior(.onScrollDown)
         .sheet(isPresented: $showDevTools) {
-            DevToolsSheet(ble: ble, isPresented: $showDevTools)
+            SettingsSheet(ble: ble, isPresented: $showDevTools)
         }
     }
 }

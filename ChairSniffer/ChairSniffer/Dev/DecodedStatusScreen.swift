@@ -25,7 +25,6 @@ enum FrameDisplayMode: String, CaseIterable {
 
 struct StatusContent: View {
     @ObservedObject var ble: ChairBLEManager
-    var showConnection: Bool = true
 
     @AppStorage("frameDisplayMode") private var displayMode = FrameDisplayMode.binary
     @State private var isFramesPaused = false
@@ -54,9 +53,6 @@ struct StatusContent: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                if showConnection {
-                    ConnectionPanel(ble: ble)
-                }
                 decodedPanel
                 rawStatusPanel
             }

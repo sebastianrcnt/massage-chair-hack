@@ -61,6 +61,9 @@ final class ChairBLEManager: NSObject, ObservableObject {
     @Published var systemLogs: [ChairLogEntry] = []
     @Published var droppedRawLogCount = 0
     @Published var currentAutoMode: String?
+    /// The peripheral currently being connected to (spinner state) or already connected (idle/active).
+    /// Cleared on failure, intentional disconnect, or unintentional drop.
+    @Published var activeDeviceId: UUID?
 
     private static let autoModeCodes: [String: String] = [
         "031F": "충전",
@@ -140,6 +143,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
         central.stopScan()
         isScanning = false
         isConnected = false
+        activeDeviceId = nil
         connectionState = "Disconnected"
         resetSession()
     }
@@ -153,6 +157,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
         connectionState = "Connecting to \(device.name)"
         appendSystem(.system, "Connecting to \(device.name) (\(device.rssi) dBm)")
         resetSession()
+        activeDeviceId = device.id
         central.connect(device.peripheral)
     }
 
@@ -341,12 +346,14 @@ extension ChairBLEManager: CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         isConnected = false
+        activeDeviceId = nil
         connectionState = "Connect failed"
         appendSystem(.error, "Couldn't connect: \(error?.localizedDescription ?? "unknown error")")
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         isConnected = false
+        activeDeviceId = nil
         commandCharacteristic = nil
         connectionState = "Disconnected"
         if let error {

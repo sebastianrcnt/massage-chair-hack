@@ -6,7 +6,7 @@ struct HomeTab: View {
 
     private let power = ControlItem(code: "0303", label: "전원",     icon: "power",     prominence: .primary)
     private let pause = ControlItem(code: "0322", label: "일시정지", icon: "playpause", prominence: .primary)
-    private let timer = ControlItem(code: "032D", label: "타이머",   icon: "timer")
+    private let timer = ControlItem(code: "032D", label: "타이머", emphasizesState: true)
 
     private let autoModes: [ControlItem] = [
         ControlItem(code: "031F", label: "충전",     icon: "battery.100"),

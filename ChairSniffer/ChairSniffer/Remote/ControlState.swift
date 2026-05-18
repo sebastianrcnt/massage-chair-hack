@@ -14,7 +14,7 @@ enum LiveStateLookup {
         case "032D":
             return timerState(decoded.timer)
         case "0363":
-            return ControlState(isOn: ble.isManualMode, label: ble.manualTechnique)
+            return ControlState(isOn: ble.isManualMode, label: ble.manualTechnique ?? (ble.isManualMode ? "수동" : nil))
         case "0330":
             return toggleState(decoded.heater)
         case "0375":
@@ -24,7 +24,7 @@ enum LiveStateLookup {
         case "0315":
             return levelState(decoded.airStrength)
         case "0327":
-            return levelState(decoded.speed)
+            return speedState(decoded.speed)
         case "0364":
             return widthState(decoded.width)
         default:
@@ -41,14 +41,27 @@ enum LiveStateLookup {
     }
 
     private static func levelState(_ value: String) -> ControlState? {
-        guard ["1", "3", "5"].contains(value) else { return nil }
-        return ControlState(isOn: false, label: "\(value)단")
+        switch value {
+        case "1": return ControlState(isOn: false, label: "약하게")
+        case "3": return ControlState(isOn: false, label: "중간")
+        case "5": return ControlState(isOn: false, label: "강하게")
+        default:  return nil
+        }
+    }
+
+    private static func speedState(_ value: String) -> ControlState? {
+        switch value {
+        case "1": return ControlState(isOn: false, label: "느리게")
+        case "3": return ControlState(isOn: false, label: "중간")
+        case "5": return ControlState(isOn: false, label: "빠르게")
+        default:  return nil
+        }
     }
 
     private static func widthState(_ value: String) -> ControlState? {
         switch value {
         case "wide":   return ControlState(isOn: false, label: "넓게")
-        case "medium": return ControlState(isOn: false, label: "보통")
+        case "medium": return ControlState(isOn: false, label: "중간")
         case "narrow": return ControlState(isOn: false, label: "좁게")
         default:       return nil
         }

@@ -4,14 +4,14 @@ struct MassageTab: View {
     @ObservedObject var ble: ChairBLEManager
     let onStatusTap: () -> Void
 
-    private let speed      = ControlItem(code: "0327", label: "속도",   icon: "speedometer")
-    private let width      = ControlItem(code: "0364", label: "폭",     icon: "arrow.left.and.right")
+    private let speed      = ControlItem(code: "0327", label: "속도", emphasizesState: true)
+    private let width      = ControlItem(code: "0364", label: "폭", emphasizesState: true)
     private let footRoller = ControlItem(code: "0331", label: "발롤러", icon: "circle.dotted")
     private let heater     = ControlItem(code: "0330", label: "온열",   icon: "heat.waves")
     private let air        = ControlItem(code: "0375", label: "에어",     icon: "pillow.fill")
-    private let airLevel   = ControlItem(code: "0315", label: "에어 세기", icon: "gauge.medium")
+    private let airLevel   = ControlItem(code: "0315", label: "에어 세기", emphasizesState: true)
 
-    private let manual   = ControlItem(code: "0363", label: "수동", icon: "slider.horizontal.3")
+    private let manual   = ControlItem(code: "0363", label: "수동", emphasizesState: true)
     private let headUp   = ControlItem(code: "032C", label: "헤드 올리기", icon: "arrow.up")
     private let headDown = ControlItem(code: "032F", label: "헤드 내리기", icon: "arrow.down")
 

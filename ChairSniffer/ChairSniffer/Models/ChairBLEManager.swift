@@ -423,6 +423,9 @@ final class ChairBLEManager: NSObject, ObservableObject {
             } else if payload.count > 5 {
                 latestShort = payload
             } else {
+                if payload == "1104" {
+                    ChairHaptics.doubleHeavy()
+                }
                 let info = CommandCatalog.describe(payload)
                 appendCommand(
                     .chairToRemote,

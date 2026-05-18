@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ControlItem: Identifiable {
     enum Prominence {
@@ -11,14 +12,16 @@ struct ControlItem: Identifiable {
     let label: String
     let icon: String?
     let prominence: Prominence
+    let emphasizesState: Bool
 
     var id: String { code + label }
 
-    init(code: String, label: String, icon: String? = nil, prominence: Prominence = .normal) {
+    init(code: String, label: String, icon: String? = nil, prominence: Prominence = .normal, emphasizesState: Bool = false) {
         self.code = code
         self.label = label
         self.icon = icon
         self.prominence = prominence
+        self.emphasizesState = emphasizesState
     }
 }
 
@@ -31,6 +34,40 @@ struct ControlCommandButton: View {
 
     var body: some View {
         Button {} label: {
+            buttonContent
+            .foregroundStyle(foreground)
+            .frame(maxWidth: .infinity, minHeight: minHeight)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 8)
+        }
+        .buttonStyle(PressReleaseCommandButtonStyle(
+            code: item.code,
+            prominence: effectiveProminence,
+            onPress: onPress,
+            onRelease: onRelease
+        ))
+        .accessibilityAction {
+            ChairHaptics.heavy()
+            onPress(item.code)
+            onRelease()
+        }
+    }
+
+    @ViewBuilder
+    private var buttonContent: some View {
+        if item.emphasizesState {
+            VStack(spacing: 3) {
+                Text(primaryStateText)
+                    .font(.system(size: 25, weight: .semibold).monospacedDigit())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.62)
+                Text(item.label)
+                    .font(.system(size: 12, weight: .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .opacity(0.72)
+            }
+        } else {
             VStack(spacing: 4) {
                 if let icon = item.icon {
                     Image(systemName: icon)
@@ -46,21 +83,11 @@ struct ControlCommandButton: View {
                         .opacity(0.78)
                 }
             }
-            .foregroundStyle(foreground)
-            .frame(maxWidth: .infinity, minHeight: minHeight)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 8)
         }
-        .buttonStyle(PressReleaseCommandButtonStyle(
-            code: item.code,
-            prominence: effectiveProminence,
-            onPress: onPress,
-            onRelease: onRelease
-        ))
-        .accessibilityAction {
-            onPress(item.code)
-            onRelease()
-        }
+    }
+
+    private var primaryStateText: String {
+        state?.label ?? "-"
     }
 
     private var effectiveProminence: ControlItem.Prominence {
@@ -124,6 +151,7 @@ private struct PressReleaseCommandButtonBody: View {
             .onChange(of: configuration.isPressed) { _, isPressed in
                 if isPressed && !wasPressed {
                     wasPressed = true
+                    ChairHaptics.heavy()
                     onPress(code)
                 } else if !isPressed && wasPressed {
                     wasPressed = false
@@ -140,6 +168,19 @@ private struct PressReleaseCommandButtonBody: View {
             return .regular.tint(.chairActive).interactive()
         case .normal:
             return .regular.interactive()
+        }
+    }
+}
+
+enum ChairHaptics {
+    static func heavy() {
+        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+    }
+
+    static func doubleHeavy() {
+        heavy()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            heavy()
         }
     }
 }

@@ -10,7 +10,7 @@
 | B1 | 0xFF | B1 timer tens |
 | B2 | 0xF0 | B2 timer ones high nibble |
 | B3 | 0xDF | B3 b7:b6 manual blinks + b4 air + timer ones low nibble |
-| B4 | 0x7F | B4 b6:b5 air strength + b4 manual indicator + b3:b0 manual technique blinks |
+| B4 | 0x6F | B4 b6:b5 air strength + b3:b0 manual technique blinks |
 | B5 | 0x0C | B5 b3:b2 massage speed |
 | B6 | 0xFF | B6 foot roller, leg/back motion, width |
 | B7 | 0x63 | B7 b6/b5/b1/b0 air-area blinks |
@@ -23,5 +23,5 @@
 | B0 | 0x00 | unknown |
 | B1 | 0x00 | unknown |
 | B2 | 0x00 | unknown |
-| B3 | 0x00 | unknown |
+| B3 | 0x20 | B3 b5 manual indicator |
 | B4 | 0x06 | B4 b2:b1 massage area |

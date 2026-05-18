@@ -17,7 +17,7 @@
 | B4[b7] | Unknown flag | Not mapped | Unknown |
 | B4[b6:b5] | Air strength | 00 -> lv 1, 01 -> lv 3, 11 -> lv 5, 10 reserved | Tentative |
 | B4[b5] | Air strength low bit | With B4[b6]; 00 -> lv 1, 01 -> lv 3, 11 -> lv 5, 10 reserved | Tentative |
-| B4[b4] | Manual mode indicator | 0 -> manual mode, 1 -> auto / non-manual mode | Tentative |
+| B4[b4] | Unknown flag | Previously suspected manual mode indicator; superseded by short B3[b5] | Unknown |
 | B4[b3] | Manual: 복합 blink | Default 1; blinks 0/1 when 복합 active | Tentative |
 | B4[b2] | Manual: 롤링 두드림 blink | Default 1; blinks 0/1 when 롤링 두드림 active | Tentative |
 | B4[b1] | Manual: 주무름 두드림 blink | Default 1; blinks 0/1 when 주무름 두드림 active | Tentative |

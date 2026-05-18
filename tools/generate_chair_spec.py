@@ -134,16 +134,14 @@ def generate_swift(spec: dict[str, Any]) -> str:
     long_masks = ", ".join(f"0x{row['mask']:02X}" for row in spec["known_masks"]["long"])
     short_masks = ", ".join(f"0x{row['mask']:02X}" for row in spec["known_masks"]["short"])
 
-    manual_indicator = next(row for row in spec["status_maps"]["long"] if row["name"] == "Manual mode indicator")
-    manual_byte = int(manual_indicator["range"].split("[")[0][1:])
-    manual_bit = int(manual_indicator["range"].split("[b")[1].split("]")[0])
+    manual_indicator = short_decode["manual_indicator"]
 
     constants = [
         f"    static let longKnownMask: [UInt8] = [{long_masks}]",
         f"    static let shortKnownMask: [UInt8] = [{short_masks}]",
         "",
-        f"    static let manualIndicatorByteIndex = {manual_byte}",
-        f"    static let manualIndicatorMask: UInt8 = 0x{bit_mask(manual_bit):02X}",
+        f"    static let manualIndicatorByteIndex = {manual_indicator['byte']}",
+        f"    static let manualIndicatorMask: UInt8 = 0x{bit_mask(manual_indicator['bit']):02X}",
         "",
         f"    static let airByteIndex = {long_decode['air']['byte']}",
         f"    static let airMask: UInt8 = 0x{bit_mask(long_decode['air']['bit']):02X}",

@@ -7,6 +7,8 @@
 | B0[b7:b0] | Unknown | Observed 03, 00 | Unknown |
 | B1[b7:b0] | Unknown | Observed 15, 06 | Unknown |
 | B2[b7:b0] | Unknown | Observed 13, 06, 15 | Unknown |
-| B3[b7:b0] | Unknown | Not mapped | Unknown |
+| B3[b7:b6] | Unknown | Not mapped | Unknown |
+| B3[b5] | Manual mode indicator | 0 -> manual mode, 1 -> auto / non-manual mode | Tentative |
+| B3[b4:b0] | Unknown | Not mapped | Unknown |
 | B4[b7:b3], B4[b0] | Unknown flags | Not mapped | Unknown |
 | B4[b2:b1] | Massage area | 00 -> point, 01 -> local, 10 -> full, 11 reserved | Tentative |

@@ -130,11 +130,11 @@ enum ChairSpec {
         (position: .top, byteIndex: 8, mask: 0x20),
     ]
 
-    static let longKnownMask: [UInt8] = [0x07, 0xFF, 0xF0, 0xDF, 0x7F, 0x0C, 0xFF, 0x63, 0xE2]
-    static let shortKnownMask: [UInt8] = [0x00, 0x00, 0x00, 0x00, 0x06]
+    static let longKnownMask: [UInt8] = [0x07, 0xFF, 0xF0, 0xDF, 0x6F, 0x0C, 0xFF, 0x63, 0xE2]
+    static let shortKnownMask: [UInt8] = [0x00, 0x00, 0x00, 0x20, 0x06]
 
-    static let manualIndicatorByteIndex = 4
-    static let manualIndicatorMask: UInt8 = 0x10
+    static let manualIndicatorByteIndex = 3
+    static let manualIndicatorMask: UInt8 = 0x20
 
     static let airByteIndex = 3
     static let airMask: UInt8 = 0x10

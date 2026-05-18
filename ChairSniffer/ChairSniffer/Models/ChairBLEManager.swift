@@ -102,7 +102,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
         }
     }
 
-    /// `true` while the chair's long status reports manual mode (B4[b4] == 0).
+    /// `true` while the chair's short status reports manual mode (B3[b5] == 0).
     @Published var isManualMode: Bool = false
     /// Most-recently observed blinking manual technique (e.g. "롤링 두드림"), or nil when none active.
     @Published var manualTechnique: String?
@@ -363,26 +363,26 @@ final class ChairBLEManager: NSObject, ObservableObject {
         rollerPosition = nil
     }
 
-    /// Inspects a long-status hex string and updates `isManualMode` /
-    /// `manualTechnique` based on the manual-mode indicator (B4[b4] == 0)
-    /// and which technique-blink bit (B3[b7], B3[b6], B4[b0..b3]) most recently
-    /// blinked within the blink window.
-    private func updateManualState(from longHex: String) {
-        let bytes = ChairDecode.bytes(from: longHex)
+    private func updateManualModeState(from shortHex: String) {
+        let bytes = ChairDecode.bytes(from: shortHex)
         guard bytes.indices.contains(ChairSpec.manualIndicatorByteIndex),
               let manualByte = UInt8(bytes[ChairSpec.manualIndicatorByteIndex], radix: 16) else { return }
 
         let inManual = (manualByte & ChairSpec.manualIndicatorMask) == 0
+        isManualMode = inManual
+        if inManual { return }
 
-        if !inManual {
-            if isManualMode || manualTechnique != nil || !manualBitLastZero.isEmpty || !manualBitLastOne.isEmpty {
-                manualBitLastZero.removeAll()
-                manualBitLastOne.removeAll()
-                isManualMode = false
-                manualTechnique = nil
-            }
-            return
-        }
+        manualBitLastZero.removeAll()
+        manualBitLastOne.removeAll()
+        manualTechnique = nil
+    }
+
+    /// Inspects a long-status hex string and updates `manualTechnique` from the
+    /// technique-blink bits (B3[b7], B3[b6], B4[b0..b3]).
+    private func updateManualTechniqueState(from longHex: String) {
+        guard isManualMode else { return }
+
+        let bytes = ChairDecode.bytes(from: longHex)
 
         let now = Date()
         for entry in Self.manualTechniqueBits {
@@ -405,7 +405,6 @@ final class ChairBLEManager: NSObject, ObservableObject {
         }
         let mostRecent = blinkCandidates
             .max { $0.date < $1.date }
-        isManualMode = mostRecent != nil
         manualTechnique = mostRecent?.name
     }
 
@@ -525,13 +524,14 @@ final class ChairBLEManager: NSObject, ObservableObject {
             let payload = String(text.dropFirst(8))
             if payload.count > 12 {
                 latestLong = payload
-                updateManualState(from: payload)
+                updateManualTechniqueState(from: payload)
                 updateStableAirStrength(from: payload)
                 updateWidthAutoState(from: payload)
                 updateAirAreaState(from: payload)
                 updateRollerPositionState(from: payload)
             } else if payload.count > 5 {
                 latestShort = payload
+                updateManualModeState(from: payload)
                 updateStableArea(from: payload)
             } else {
                 if payload == "1104" {

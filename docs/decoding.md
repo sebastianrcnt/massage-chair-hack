@@ -91,10 +91,10 @@ air-area bits can blink at the same time.
 
 ## Manual Mode
 
-`B4[b4]` indicates the broad mode: `0` is manual mode and `1` is auto /
-non-manual mode. Six bits across `B3[b7:b6]` and `B4[b3:b0]` each correspond to
-one manual massage technique. Each bit defaults to `1`; while the matching
-technique is active, the bit blinks `0`/`1`.
+Short-status `B3[b5]` indicates the broad mode: `0` is manual mode and `1` is
+auto / non-manual mode. Six long-status bits across `B3[b7:b6]` and `B4[b3:b0]`
+each correspond to one manual massage technique. Each bit defaults to `1`; while
+the matching technique is active, the bit blinks `0`/`1`.
 
 The original remote/manual-mode names appear to be misleading, so the app uses
 observed-motion names instead. The exact names and bit assignments live in:

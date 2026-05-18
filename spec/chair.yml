@@ -261,6 +261,11 @@ decode:
         byte: 2
         bits: [7, 4]
   short:
+    manual_indicator:
+      byte: 3
+      bit: 5
+      manual: 0
+      auto: 1
     area:
       byte: 4
       bits: [2, 1]
@@ -357,8 +362,8 @@ known_masks:
       mask: 0xDF
       note: "B3 b7:b6 manual blinks + b4 air + timer ones low nibble"
     - byte: 4
-      mask: 0x7F
-      note: "B4 b6:b5 air strength + b4 manual indicator + b3:b0 manual technique blinks"
+      mask: 0x6F
+      note: "B4 b6:b5 air strength + b3:b0 manual technique blinks"
     - byte: 5
       mask: 0x0C
       note: "B5 b3:b2 massage speed"
@@ -383,8 +388,8 @@ known_masks:
       mask: 0x00
       note: unknown
     - byte: 3
-      mask: 0x00
-      note: unknown
+      mask: 0x20
+      note: "B3 b5 manual indicator"
     - byte: 4
       mask: 0x06
       note: "B4 b2:b1 massage area"
@@ -444,9 +449,9 @@ status_maps:
       rule: With B4[b6]; 00 -> lv 1, 01 -> lv 3, 11 -> lv 5, 10 reserved
       confidence: Tentative
     - range: B4[b4]
-      name: Manual mode indicator
-      rule: 0 -> manual mode, 1 -> auto / non-manual mode
-      confidence: Tentative
+      name: Unknown flag
+      rule: Previously suspected manual mode indicator; superseded by short B3[b5]
+      confidence: Unknown
     - range: B4[b3]
       name: "Manual: 복합 blink"
       rule: Default 1; blinks 0/1 when 복합 active
@@ -552,7 +557,15 @@ status_maps:
       name: Unknown
       rule: Observed 13, 06, 15
       confidence: Unknown
-    - range: B3[b7:b0]
+    - range: B3[b7:b6]
+      name: Unknown
+      rule: Not mapped
+      confidence: Unknown
+    - range: B3[b5]
+      name: Manual mode indicator
+      rule: 0 -> manual mode, 1 -> auto / non-manual mode
+      confidence: Tentative
+    - range: B3[b4:b0]
       name: Unknown
       rule: Not mapped
       confidence: Unknown

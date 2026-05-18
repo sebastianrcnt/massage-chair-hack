@@ -12,7 +12,7 @@ struct ContentView: View {
             Tab("자세", systemImage: "figure.seated.side") {
                 PostureTab(ble: ble, onStatusTap: { showDevTools = true })
             }
-            Tab("마사지", systemImage: "hand.raised.fill") {
+            Tab("수동", systemImage: "hand.point.up.left.fill") {
                 MassageTab(ble: ble, onStatusTap: { showDevTools = true })
             }
         }

@@ -4,8 +4,12 @@ struct MassageTab: View {
     @ObservedObject var ble: ChairBLEManager
     let onStatusTap: () -> Void
 
+    private let manual    = ControlItem(code: "0363", label: "수동", emphasizesState: true, releaseCode: "0339")
     private let speed      = ControlItem(code: "0327", label: "속도", emphasizesState: true, releaseCode: "0336")
     private let width      = ControlItem(code: "0364", label: "폭", emphasizesState: true)
+    private let area       = ControlItem(code: "0314", label: "부위", icon: "scope")
+    private let headUp     = ControlItem(code: "032C", label: "헤드", icon: "arrow.up", repeatsProgressHaptics: true)
+    private let headDown   = ControlItem(code: "032F", label: "헤드", icon: "arrow.down", repeatsProgressHaptics: true)
     private let footRoller = ControlItem(code: "0331", label: "발롤러", icon: "circle.dotted", releaseCode: "0339")
     private let heater     = ControlItem(code: "0330", label: "온열",   icon: "heat.waves")
     private let air        = ControlItem(code: "0375", label: "에어",     icon: "pillow.fill")
@@ -14,9 +18,10 @@ struct MassageTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                TabHeader(title: "마사지", ble: ble, onStatusTap: onStatusTap)
+                TabHeader(title: "수동", ble: ble, onStatusTap: onStatusTap)
                 GlassEffectContainer(spacing: 12) {
                     VStack(spacing: 24) {
+                        manualSection
                         intensitySection
                         airSection
                     }
@@ -27,6 +32,21 @@ struct MassageTab: View {
             .padding(.bottom, 14)
         }
         .background(Color(.systemGroupedBackground))
+    }
+
+    private var manualSection: some View {
+        ControlSection(title: "수동 제어") {
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    button(manual, minHeight: 76)
+                    button(area, minHeight: 76)
+                }
+                HStack(spacing: 12) {
+                    button(headUp, minHeight: 64)
+                    button(headDown, minHeight: 64)
+                }
+            }
+        }
     }
 
     private var intensitySection: some View {

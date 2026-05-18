@@ -30,6 +30,8 @@ enum LiveStateLookup {
                 return ControlState(isOn: false, label: "자동")
             }
             return widthState(decoded.width)
+        case "0314":
+            return areaState(decoded.area)
         default:
             if let autoModeName = ChairSpec.autoModeCodes[code.uppercased()] {
                 return ControlState(isOn: !ble.isManualMode && ble.currentAutoMode == autoModeName, label: nil)
@@ -70,6 +72,15 @@ enum LiveStateLookup {
         case "medium": return ControlState(isOn: false, label: "중간")
         case "narrow": return ControlState(isOn: false, label: "좁게")
         default:       return nil
+        }
+    }
+
+    private static func areaState(_ value: String) -> ControlState? {
+        switch value {
+        case "point": return ControlState(isOn: false, label: "지점")
+        case "local": return ControlState(isOn: false, label: "부분")
+        case "full":  return ControlState(isOn: false, label: "전체")
+        default:      return nil
         }
     }
 

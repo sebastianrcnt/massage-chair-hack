@@ -5,11 +5,14 @@ struct HomeTab: View {
     let onStatusTap: () -> Void
 
     private let power = ControlItem(code: "0303", label: "전원",     icon: "power",     prominence: .primary, iconOnly: true)
-    private let pause = ControlItem(code: "0322", label: "일시정지", icon: "playpause", prominence: .primary, iconOnly: true)
     private let timer = ControlItem(code: "032D", label: "타이머", emphasizesState: true)
-    private let manual = ControlItem(code: "0363", label: "수동", emphasizesState: true, releaseCode: "0339")
-    private let headUp = ControlItem(code: "032C", label: "헤드", icon: "arrow.up", repeatsProgressHaptics: true)
-    private let headDown = ControlItem(code: "032F", label: "헤드", icon: "arrow.down", repeatsProgressHaptics: true)
+    private let backRecline = ControlItem(code: "0304", label: "등", icon: "chevron.down", repeatsProgressHaptics: true)
+    private let legLower = ControlItem(code: "0301", label: "발판", icon: "chevron.down", repeatsProgressHaptics: true)
+    private let air = ControlItem(code: "0375", label: "에어", icon: "pillow.fill")
+    private let airLevel = ControlItem(code: "0315", label: "강도", emphasizesState: true)
+    private let heater = ControlItem(code: "0330", label: "온열", icon: "heat.waves")
+    private let footRoller = ControlItem(code: "0331", label: "발롤러", icon: "circle.dotted", releaseCode: "0339")
+    private let reset = ControlItem(code: "0384", label: "원위치", icon: "arrow.counterclockwise")
 
     private let autoModes: [ControlItem] = [
         ControlItem(code: "031F", label: "충전",     icon: "battery.100"),
@@ -21,30 +24,51 @@ struct HomeTab: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                TabHeader(title: "홈", ble: ble, onStatusTap: onStatusTap)
-                GlassEffectContainer(spacing: 12) {
-                    VStack(spacing: 14) {
-                        sessionRow
-                        autoModeRow
-                        manualRow
-                    }
+        VStack(spacing: 18) {
+            TabHeader(title: "홈", ble: ble, onStatusTap: onStatusTap)
+            GlassEffectContainer(spacing: 12) {
+                VStack(spacing: 14) {
+                    sessionRow
+                    postureRow
+                    comfortRows
+                    autoModeRow
+                    resetRow
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 14)
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 14)
         .background(Color(.systemGroupedBackground))
     }
 
     private var sessionRow: some View {
         HStack(spacing: 12) {
             button(power, minHeight: 76)
-            button(pause, minHeight: 76)
             button(timer, minHeight: 76)
             autoTimerExtendButton
+                .frame(width: 76)
+        }
+    }
+
+    private var postureRow: some View {
+        HStack(spacing: 12) {
+            button(backRecline, minHeight: 84)
+            button(legLower, minHeight: 84)
+        }
+    }
+
+    private var comfortRows: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                button(air, minHeight: 68)
+                button(airLevel, minHeight: 68)
+            }
+            HStack(spacing: 12) {
+                button(heater, minHeight: 62)
+                button(footRoller, minHeight: 62)
+            }
         }
     }
 
@@ -56,14 +80,8 @@ struct HomeTab: View {
         }
     }
 
-    private var manualRow: some View {
-        HStack(spacing: 12) {
-            button(manual, minHeight: 64)
-            HStack(spacing: 12) {
-                button(headUp, minHeight: 64)
-                button(headDown, minHeight: 64)
-            }
-        }
+    private var resetRow: some View {
+        button(reset, minHeight: 76)
     }
 
     private var autoTimerExtendButton: some View {

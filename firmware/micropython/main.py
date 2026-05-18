@@ -70,6 +70,13 @@ BLE_ADVERTISE_INTERVAL_US = const(100_000)
 BLE_ADVERTISE_RETRY_MS = const(10_000)
 GC_INTERVAL_MS = const(60_000)
 WDT_TIMEOUT_MS = const(30_000)
+LED_CONNECTED_HEARTBEAT_MS = const(5_000)
+LED_DISCONNECTED_HEARTBEAT_MS = const(1_000)
+LED_HEARTBEAT_ON_MS = const(35)
+LED_ERROR_ON_MS = const(100)
+LED_ERROR_OFF_MS = const(100)
+LED_ERROR_PULSES = const(3)
+LED_OTA_PULSE_MS = const(120)
 
 micropython.alloc_emergency_exception_buf(100)
 
@@ -105,6 +112,11 @@ class ChairBleBridge:
         self.need_advertise = False
         self.last_advertise_ms = time.ticks_ms()
         self.last_gc_ms = time.ticks_ms()
+        self.led_off_at = None
+        self.next_heartbeat_ms = time.ticks_ms()
+        self.error_pulses_remaining = 0
+        self.error_led_on = False
+        self.next_error_toggle_ms = time.ticks_ms()
 
         self.ble = bluetooth.BLE()
         self.ble.active(True)
@@ -155,11 +167,13 @@ class ChairBleBridge:
             conn_handle, _, _ = data
             self.connections.add(conn_handle)
             print("Client connected")
+            self._queue_error_blink(2)
         elif event == _IRQ_CENTRAL_DISCONNECT:
             conn_handle, _, _ = data
             self.connections.discard(conn_handle)
             print("Client disconnected")
             self.need_advertise = True
+            self._queue_error_blink(2)
         elif event == _IRQ_GATTS_WRITE:
             conn_handle, value_handle = data
             if value_handle == self.cmd_handle:
@@ -195,9 +209,54 @@ class ChairBleBridge:
                 self.ble.gatts_notify(conn_handle, self.data_handle, data)
             except OSError:
                 self.connections.discard(conn_handle)
+                self._queue_error_blink()
         print(message)
         if not self.connections:
             self.need_advertise = True
+
+    def _led_on_for(self, duration_ms):
+        self.led.on()
+        self.led_off_at = time.ticks_add(time.ticks_ms(), duration_ms)
+
+    def _queue_error_blink(self, pulses=LED_ERROR_PULSES):
+        self.error_pulses_remaining = max(self.error_pulses_remaining, pulses)
+        self.error_led_on = False
+        self.next_error_toggle_ms = time.ticks_ms()
+
+    def _process_led(self):
+        now = time.ticks_ms()
+
+        if self.led_off_at is not None and time.ticks_diff(now, self.led_off_at) >= 0:
+            self.led.off()
+            self.led_off_at = None
+
+        if self.ota_active:
+            if self.led_off_at is None and time.ticks_diff(now, self.next_heartbeat_ms) >= 0:
+                self._led_on_for(LED_OTA_PULSE_MS)
+                self.next_heartbeat_ms = time.ticks_add(now, LED_OTA_PULSE_MS)
+            return
+
+        if self.error_pulses_remaining and time.ticks_diff(now, self.next_error_toggle_ms) >= 0:
+            if not self.error_led_on:
+                self._led_on_for(LED_ERROR_ON_MS)
+                self.error_led_on = True
+                self.next_error_toggle_ms = time.ticks_add(now, LED_ERROR_ON_MS)
+            else:
+                self.led.off()
+                self.led_off_at = None
+                self.error_led_on = False
+                self.error_pulses_remaining -= 1
+                self.next_error_toggle_ms = time.ticks_add(now, LED_ERROR_OFF_MS)
+            return
+
+        interval = (
+            LED_CONNECTED_HEARTBEAT_MS
+            if self.connections
+            else LED_DISCONNECTED_HEARTBEAT_MS
+        )
+        if self.led_off_at is None and time.ticks_diff(now, self.next_heartbeat_ms) >= 0:
+            self._led_on_for(LED_HEARTBEAT_ON_MS)
+            self.next_heartbeat_ms = time.ticks_add(now, interval)
 
     def send_to_chair(self, command):
         self.command_uart.deinit()
@@ -223,13 +282,12 @@ class ChairBleBridge:
         self.ble_send("[TRANSMITTED] " + command)
 
     def _send_line(self, message):
-        self.led.on()
         self.ble_send(message)
-        self.led.off()
 
     def _emit_frame_messages(self, messages):
         for message in messages:
             if message.startswith("[ERR] "):
+                self._queue_error_blink()
                 self.ble_send(message)
             else:
                 self._send_line(message)
@@ -261,6 +319,7 @@ class ChairBleBridge:
         dropped = self.dropped_ble_writes
         if dropped:
             self.dropped_ble_writes = 0
+            self._queue_error_blink()
             self.ble_send("[ERROR] Dropped {} BLE write(s)".format(dropped))
 
     def _process_pending_ota(self):
@@ -282,15 +341,18 @@ class ChairBleBridge:
     def _ota_begin(self, payload):
         parts = payload.split()
         if len(parts) != 2:
+            self._queue_error_blink()
             self.ble_send("[ERROR] OTA BEGIN requires: filename size")
             return
         filename, size_str = parts[0], parts[1]
         if not filename.endswith(".py") or "/" in filename or ".." in filename:
+            self._queue_error_blink()
             self.ble_send("[ERROR] OTA filename must be a .py file with no path")
             return
         try:
             size = int(size_str)
         except ValueError:
+            self._queue_error_blink()
             self.ble_send("[ERROR] OTA BEGIN invalid size")
             return
         if self.ota_file is not None:
@@ -308,11 +370,13 @@ class ChairBleBridge:
 
     def _ota_data(self, hex_chunk):
         if not self.ota_active or self.ota_file is None:
+            self._queue_error_blink()
             self.ble_send("[ERROR] OTA not started")
             return
         try:
             data = bytes.fromhex(hex_chunk)
         except ValueError:
+            self._queue_error_blink()
             self.ble_send("[ERROR] OTA DATA invalid hex")
             return
         self.ota_file.write(data)
@@ -321,6 +385,7 @@ class ChairBleBridge:
 
     def _ota_commit(self, expected_crc):
         if not self.ota_active or self.ota_file is None:
+            self._queue_error_blink()
             self.ble_send("[ERROR] OTA not started")
             return
         self.ota_file.close()
@@ -332,16 +397,19 @@ class ChairBleBridge:
             actual_crc = binascii.crc32(content) & 0xFFFFFFFF
             if str(actual_crc) != expected_crc:
                 os.remove(tmp)
+                self._queue_error_blink()
                 self.ble_send("[ERROR] OTA checksum mismatch: got {} expected {}".format(actual_crc, expected_crc))
                 self.ota_active = False
                 return
             if len(content) != self.ota_size:
                 os.remove(tmp)
+                self._queue_error_blink()
                 self.ble_send("[ERROR] OTA size mismatch: got {} expected {}".format(len(content), self.ota_size))
                 self.ota_active = False
                 return
             os.rename(tmp, self.ota_filename)
         except Exception as e:
+            self._queue_error_blink()
             self.ble_send("[ERROR] OTA commit failed: {}".format(e))
             self.ota_active = False
             return
@@ -368,6 +436,7 @@ class ChairBleBridge:
             self._process_pending()
             self._process_pending_ota()
             self._process_ble_health()
+            self._process_led()
             self.wdt.feed()
             time.sleep_ms(2)
 

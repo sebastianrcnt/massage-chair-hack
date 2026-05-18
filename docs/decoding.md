@@ -77,12 +77,13 @@ the last byte so it can tolerate length changes.
 | `B2[b7:b4]` | Timer ones segment low nibble | Becomes `ones_segment[b3:b0]` | Confirmed |
 | `B2[b3:b0]` | Unknown flags | Varies across samples | Unknown |
 | `B3[b7]` | Manual: 롤링 blink | Default `1`; blinks `0`/`1` when 롤링 is the active manual technique | Tentative |
-| `B3[b6]` | Manual: 주무름 blink / Air strength high bit | Manual mode: blinks `0`/`1` when 주무름 active. Otherwise: high bit of strength (with `B3[b5]`) | Tentative — mode-dependent |
-| `B3[b5]` | Air strength low bit | With `B3[b6]`: `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative |
+| `B3[b6]` | Manual: 주무름 blink | Default `1`; blinks `0`/`1` when 주무름 is the active manual technique | Tentative |
+| `B3[b5]` | Unknown flag | Not mapped | Unknown |
 | `B3[b4]` | Air | `1` -> on, `0` -> off | Tentative |
 | `B3[b3:b0]` | Timer ones segment high nibble | Becomes `ones_segment[b7:b4]` | Confirmed |
-| `B4[b7:b6]` | Unknown flags | Not mapped | Unknown |
-| `B4[b5:b4]` | Manual mode indicator | `00` -> chair is in manual mode | Tentative |
+| `B4[b7]` | Unknown flag | Not mapped | Unknown |
+| `B4[b6:b5]` | Air strength | `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative |
+| `B4[b5:b4]` | Manual mode indicator | `00` -> chair is in manual mode; overlaps the air-strength low bit and should be confirmed with manual technique blink evidence | Tentative — mode-dependent |
 | `B4[b3]` | Manual: 복합 blink / Massage speed high bit | Manual mode: blinks `0`/`1` when 복합 active. Otherwise: high bit of speed (with `B4[b2]`) | Tentative — mode-dependent |
 | `B4[b2]` | Manual: 롤링 두드림 blink / Massage speed low bit | Manual mode: blinks `0`/`1` when 롤링 두드림 active. With `B4[b3]`: `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative — mode-dependent |
 | `B4[b1]` | Manual: 주무름 두드림 blink | Default `1`; blinks `0`/`1` when 주무름 두드림 active | Tentative |
@@ -163,9 +164,9 @@ observed-motion names instead.
 
 Overlaps to validate:
 
-- `B3[b6:b5]` was tentatively mapped to Air strength. `B3[b6]` is also the
-  주무름 blink bit in manual mode. The two may be mode-dependent; needs
-  cross-mode capture.
+- `B4[b6:b5]` maps to Air strength. `B4[b5]` also participates in the
+  `B4[b5:b4]` manual-mode indicator, so the app should confirm manual mode with
+  manual technique blink evidence rather than the indicator alone.
 - `B4[b3:b2]` was tentatively mapped to Massage speed. `B4[b3]` is the
   복합 blink and `B4[b2]` is the 롤링 두드림 blink in manual mode. Same
   caveat.

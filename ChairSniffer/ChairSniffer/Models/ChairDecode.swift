@@ -99,12 +99,13 @@ enum ChairDecode {
     }
 
     private static func decodeAir(_ bytes: [String]) -> (state: String, strength: String) {
-        guard let value = byteValue(bytes, 3) else {
+        guard let airValue = byteValue(bytes, 3),
+              let strengthValue = byteValue(bytes, 4) else {
             return ("-", "-")
         }
 
-        let enabled = (value & 0x10) != 0 ? "on" : "off"
-        let strengthBits = (value & 0x60) >> 5
+        let enabled = (airValue & 0x10) != 0 ? "on" : "off"
+        let strengthBits = (strengthValue & 0x60) >> 5
         let strength = [0: "1", 1: "3", 3: "5"][strengthBits] ?? "reserved"
         return (enabled, strength)
     }

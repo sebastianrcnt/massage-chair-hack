@@ -22,7 +22,7 @@ enum LiveStateLookup {
         case "0331":
             return toggleState(decoded.footRoller)
         case "0315":
-            return levelState(decoded.airStrength)
+            return levelState(ble.stableAirStrength ?? decoded.airStrength)
         case "0327":
             return speedState(decoded.speed)
         case "0364":

@@ -106,6 +106,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     @Published var isManualMode: Bool = false
     /// Most-recently observed blinking manual technique (e.g. "롤링 두드림"), or nil when none active.
     @Published var manualTechnique: String?
+    @Published var stableAirStrength: String?
     @Published var activeAirAreas: [ChairAirArea] = []
     @Published var rollerPosition: ChairRollerPosition?
 
@@ -133,6 +134,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private static let manualBlinkWindow: TimeInterval = 1.5
 
     private var manualBitLastZero: [String: Date] = [:]
+    private var manualBitLastOne: [String: Date] = [:]
 
     /// B7 air-area bits default to 0 and blink high while selected. Multiple areas may blink together.
     private static let airAreaBits: [(area: ChairAirArea, byteIndex: Int, mask: UInt8)] = [
@@ -369,8 +371,10 @@ final class ChairBLEManager: NSObject, ObservableObject {
         currentAutoMode = nil
         hasReceivedFirstNotification = false
         manualBitLastZero.removeAll()
+        manualBitLastOne.removeAll()
         isManualMode = false
         manualTechnique = nil
+        stableAirStrength = nil
         recentWidthSamples.removeAll()
         isWidthAutoCycling = false
         airAreaLastHigh.removeAll()
@@ -382,7 +386,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     /// Inspects a long-status hex string and updates `isManualMode` /
     /// `manualTechnique` based on the manual-mode indicator (B4[b5:b4] == 00)
     /// and which technique-blink bit (B3[b7], B3[b6], B4[b0..b3]) most recently
-    /// read 0 within the blink window.
+    /// blinked within the blink window.
     private func updateManualState(from longHex: String) {
         let bytes = ChairDecode.bytes(from: longHex)
         guard bytes.count >= 5,
@@ -391,18 +395,13 @@ final class ChairBLEManager: NSObject, ObservableObject {
         let inManual = ((b4 >> 4) & 0b11) == 0
 
         if !inManual {
-            if isManualMode || manualTechnique != nil || !manualBitLastZero.isEmpty {
+            if isManualMode || manualTechnique != nil || !manualBitLastZero.isEmpty || !manualBitLastOne.isEmpty {
                 manualBitLastZero.removeAll()
+                manualBitLastOne.removeAll()
                 isManualMode = false
                 manualTechnique = nil
             }
             return
-        }
-
-        // Just transitioned into manual — flush any stale observations from auto mode.
-        if !isManualMode {
-            manualBitLastZero.removeAll()
-            isManualMode = true
         }
 
         let now = Date()
@@ -411,14 +410,23 @@ final class ChairBLEManager: NSObject, ObservableObject {
                   let value = UInt8(bytes[entry.byteIndex], radix: 16) else { continue }
             if value & entry.mask == 0 {
                 manualBitLastZero[entry.name] = now
+            } else {
+                manualBitLastOne[entry.name] = now
             }
         }
 
         let cutoff = now.addingTimeInterval(-Self.manualBlinkWindow)
-        let mostRecent = manualBitLastZero
-            .filter { $0.value > cutoff }
-            .max { $0.value < $1.value }
-        manualTechnique = mostRecent?.key
+        manualBitLastZero = manualBitLastZero.filter { $0.value > cutoff }
+        manualBitLastOne = manualBitLastOne.filter { $0.value > cutoff }
+
+        let blinkCandidates = manualBitLastZero.compactMap { name, zeroDate -> (name: String, date: Date)? in
+            guard let oneDate = manualBitLastOne[name], oneDate > cutoff else { return nil }
+            return (name, max(zeroDate, oneDate))
+        }
+        let mostRecent = blinkCandidates
+            .max { $0.date < $1.date }
+        isManualMode = mostRecent != nil
+        manualTechnique = mostRecent?.name
     }
 
     private func updateWidthAutoState(from longHex: String) {
@@ -431,6 +439,14 @@ final class ChairBLEManager: NSObject, ObservableObject {
 
         let distinct = Set(recentWidthSamples.map(\.value))
         isWidthAutoCycling = distinct.count >= 3
+    }
+
+    private func updateStableAirStrength(from longHex: String) {
+        guard !isManualMode else { return }
+        let strength = ChairDecode.decode(short: "", long: longHex).airStrength
+        if ["1", "3", "5"].contains(strength) {
+            stableAirStrength = strength
+        }
     }
 
     private func updateAirAreaState(from longHex: String) {
@@ -523,6 +539,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
             if payload.count > 12 {
                 latestLong = payload
                 updateManualState(from: payload)
+                updateStableAirStrength(from: payload)
                 updateWidthAutoState(from: payload)
                 updateAirAreaState(from: payload)
                 updateRollerPositionState(from: payload)

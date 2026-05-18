@@ -18,6 +18,7 @@
 		4101E11866E8050790FE462B /* DevicePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FC9649DEC8E0FFAA7FFA1CB /* DevicePickerSheet.swift */; };
 		489A29EB8BE2CB784F5B206E /* ConnectionBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF4F4D9315570CC41356DCB /* ConnectionBanner.swift */; };
 		537187D6D50E185FF00D3777 /* ChairBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AA7F67546DAFFDFCE2819A5 /* ChairBLEManager.swift */; };
+		5709FBC0FADBDAA22A2905F6 /* ChairSpec.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A8B50776A6458768BE6BD87 /* ChairSpec.generated.swift */; };
 		658D697C311F290BC1DDD56C /* ControlButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D5194DF634718D593C29C90 /* ControlButton.swift */; };
 		7BE69440439E56B5D9EDBD44 /* CommandCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 706AB9AEDAAF48E4569B10F9 /* CommandCatalog.swift */; };
 		7BFF538990EBC8ACF32CE373 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4A355DC1C61B7E9323E86928 /* Assets.xcassets */; };
@@ -41,6 +42,7 @@
 		30236C6CDB67563E78146000 /* DecodedStatusScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodedStatusScreen.swift; sourceTree = "<group>"; };
 		38AB7249A001BAEB49C7DACB /* PostureTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostureTab.swift; sourceTree = "<group>"; };
 		4A355DC1C61B7E9323E86928 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4A8B50776A6458768BE6BD87 /* ChairSpec.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairSpec.generated.swift; sourceTree = "<group>"; };
 		4AA7F67546DAFFDFCE2819A5 /* ChairBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairBLEManager.swift; sourceTree = "<group>"; };
 		4FC9649DEC8E0FFAA7FFA1CB /* DevicePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePickerSheet.swift; sourceTree = "<group>"; };
 		54BE87288976799BC075D04F /* RawFeedScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawFeedScreen.swift; sourceTree = "<group>"; };
@@ -99,6 +101,14 @@
 			);
 			sourceTree = "<group>";
 		};
+		895EAAFC03AD45F5706559C9 /* Generated */ = {
+			isa = PBXGroup;
+			children = (
+				4A8B50776A6458768BE6BD87 /* ChairSpec.generated.swift */,
+			);
+			path = Generated;
+			sourceTree = "<group>";
+		};
 		A3294C4B8B7F8D1DD7FEE585 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
@@ -119,6 +129,7 @@
 				29B1F66EBB3A48B3D1C1B9ED /* ContentView.swift */,
 				CED4EBD8C059C7C8899B468F /* Info.plist */,
 				3308EB9219710ED781B2D50C /* Dev */,
+				895EAAFC03AD45F5706559C9 /* Generated */,
 				E9B95F0FFE761C42DD349F5F /* Models */,
 				E294ECBE04175A18AA4286C2 /* Remote */,
 				A3294C4B8B7F8D1DD7FEE585 /* Shared */,
@@ -222,6 +233,7 @@
 				537187D6D50E185FF00D3777 /* ChairBLEManager.swift in Sources */,
 				F6DD83E50EA8E5E2B99C8F63 /* ChairDecode.swift in Sources */,
 				10262836AC9927D0C070B39C /* ChairSnifferApp.swift in Sources */,
+				5709FBC0FADBDAA22A2905F6 /* ChairSpec.generated.swift in Sources */,
 				7BE69440439E56B5D9EDBD44 /* CommandCatalog.swift in Sources */,
 				3EA5FB5EEC56114C975B1EA6 /* CommandLogScreen.swift in Sources */,
 				489A29EB8BE2CB784F5B206E /* ConnectionBanner.swift in Sources */,

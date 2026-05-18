@@ -15,19 +15,6 @@ struct ChairDecodedStatus {
 }
 
 enum ChairDecode {
-    private static let sevenSegmentDigits: [String: String] = [
-        "3F": "0",
-        "06": "1",
-        "5B": "2",
-        "4F": "3",
-        "66": "4",
-        "6D": "5",
-        "7D": "6",
-        "07": "7",
-        "7F": "8",
-        "6F": "9"
-    ]
-
     static func bytes(from hex: String) -> [String] {
         let cleaned = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !cleaned.isEmpty else { return [] }
@@ -82,53 +69,55 @@ enum ChairDecode {
 
     private static func decodeTimer(_ bytes: [String]) -> String {
         guard bytes.count >= 4,
-              let b2 = byteValue(bytes, 2),
-              let b3 = byteValue(bytes, 3) else {
+              let b2 = byteValue(bytes, ChairSpec.timerOnesLowByteIndex),
+              let b3 = byteValue(bytes, ChairSpec.timerOnesHighByteIndex) else {
             return "-"
         }
 
-        let tensSegment = bytes[1]
-        let onesSegmentValue = ((b3 & 0x0F) << 4) | ((b2 & 0xF0) >> 4)
+        let tensSegment = bytes[ChairSpec.timerTensByteIndex]
+        let onesHigh = (b3 & Int(ChairSpec.timerOnesHighMask)) >> ChairSpec.timerOnesHighShift
+        let onesLow = (b2 & Int(ChairSpec.timerOnesLowMask)) >> ChairSpec.timerOnesLowShift
+        let onesSegmentValue = (onesHigh << 4) | onesLow
         let onesSegment = String(format: "%02X", onesSegmentValue)
 
-        guard let tens = sevenSegmentDigits[tensSegment],
-              let ones = sevenSegmentDigits[onesSegment] else {
+        guard let tens = ChairSpec.sevenSegmentDigits[tensSegment],
+              let ones = ChairSpec.sevenSegmentDigits[onesSegment] else {
             return "-"
         }
         return "\(tens)\(ones) min"
     }
 
     private static func decodeAir(_ bytes: [String]) -> (state: String, strength: String) {
-        guard let airValue = byteValue(bytes, 3),
-              let strengthValue = byteValue(bytes, 4) else {
+        guard let airValue = byteValue(bytes, ChairSpec.airByteIndex),
+              let strengthValue = byteValue(bytes, ChairSpec.airStrengthByteIndex) else {
             return ("-", "-")
         }
 
-        let enabled = (airValue & 0x10) != 0 ? "on" : "off"
-        let strengthBits = (strengthValue & 0x60) >> 5
-        let strength = [0: "1", 1: "3", 3: "5"][strengthBits] ?? "reserved"
+        let enabled = (airValue & Int(ChairSpec.airMask)) != 0 ? "on" : "off"
+        let strengthBits = (strengthValue & Int(ChairSpec.airStrengthMask)) >> ChairSpec.airStrengthShift
+        let strength = ChairSpec.level135Values[strengthBits] ?? "reserved"
         return (enabled, strength)
     }
 
     private static func decodeSpeed(_ bytes: [String]) -> String {
-        guard let value = byteValue(bytes, 5) else {
+        guard let value = byteValue(bytes, ChairSpec.speedByteIndex) else {
             return "-"
         }
 
-        let speedBits = (value & 0x0C) >> 2
-        return [0: "1", 1: "3", 3: "5"][speedBits] ?? "reserved"
+        let speedBits = (value & Int(ChairSpec.speedMask)) >> ChairSpec.speedShift
+        return ChairSpec.level135Values[speedBits] ?? "reserved"
     }
 
     private static func decodeMotion(_ bytes: [String]) -> (active: String, back: String, leg: String) {
-        guard let value = byteValue(bytes, 6) else {
+        guard let value = byteValue(bytes, ChairSpec.motionActiveByteIndex) else {
             return ("-", "-", "-")
         }
 
-        let active = (value & 0x10) != 0 ? "moving" : "idle"
-        let backRaise = (value & 0x04) != 0 ? "raise" : nil
-        let backRecline = (value & 0x08) != 0 ? "recline" : nil
-        let legRaise = (value & 0x40) != 0 ? "raise" : nil
-        let legRecline = (value & 0x20) != 0 ? "recline" : nil
+        let active = (value & Int(ChairSpec.motionActiveMask)) != 0 ? "moving" : "idle"
+        let backRaise = (value & Int(ChairSpec.backRaiseMask)) != 0 ? "raise" : nil
+        let backRecline = (value & Int(ChairSpec.backReclineMask)) != 0 ? "recline" : nil
+        let legRaise = (value & Int(ChairSpec.legRaiseMask)) != 0 ? "raise" : nil
+        let legRecline = (value & Int(ChairSpec.legReclineMask)) != 0 ? "recline" : nil
 
         return (
             active,
@@ -138,37 +127,40 @@ enum ChairDecode {
     }
 
     private static func decodeWidth(_ bytes: [String]) -> String {
-        guard let value = byteValue(bytes, 6) else {
+        guard let value = byteValue(bytes, ChairSpec.widthByteIndex) else {
             return "-"
         }
 
-        return [0: "wide", 1: "medium", 2: "narrow"][value & 0x03] ?? "reserved"
+        let widthBits = (value & Int(ChairSpec.widthMask)) >> ChairSpec.widthShift
+        return ChairSpec.widthValues[widthBits] ?? "reserved"
     }
 
     private static func decodeFootRoller(_ bytes: [String]) -> String {
-        guard let value = byteValue(bytes, 6) else {
+        guard let value = byteValue(bytes, ChairSpec.footRollerByteIndex) else {
             return "-"
         }
 
-        return (value & 0x80) != 0 ? "on" : "off"
+        return (value & Int(ChairSpec.footRollerMask)) != 0 ? "on" : "off"
     }
 
     private static func decodeHeater(_ bytes: [String]) -> String {
-        guard let value = bytes.last.flatMap({ Int($0, radix: 16) }) else {
+        guard let value = ChairSpec.heaterByteIndex == ChairSpec.lastByteIndex
+                ? bytes.last.flatMap({ Int($0, radix: 16) })
+                : byteValue(bytes, ChairSpec.heaterByteIndex) else {
             return "-"
         }
 
-        return (value & 0x02) != 0 ? "on" : "off"
+        return (value & Int(ChairSpec.heaterMask)) != 0 ? "on" : "off"
     }
 
     private static func decodeArea(_ data: String) -> String {
         let bytes = bytes(from: data)
-        guard let value = byteValue(bytes, 4) else {
+        guard let value = byteValue(bytes, ChairSpec.areaByteIndex) else {
             return "-"
         }
 
-        let areaBits = (value & 0x06) >> 1
-        return [0: "point", 1: "local", 2: "full"][areaBits] ?? "reserved"
+        let areaBits = (value & Int(ChairSpec.areaMask)) >> ChairSpec.areaShift
+        return ChairSpec.shortAreaValues[areaBits] ?? "reserved"
     }
 }
 

@@ -109,8 +109,8 @@ uv run pytest
 ## Reverse Engineering Notes
 
 - Status maps, command codes, and decoding notes: [docs/decoding.md](docs/decoding.md)
-- The Swift app decoder is the implementation source of truth; keep `docs/decoding.md`
-  aligned with `ChairSniffer/ChairSniffer/Models/ChairDecode.swift`.
+- `spec/chair.yml` is the decoding source of truth. Regenerate Swift constants and
+  Markdown tables with `uv run tools/generate_chair_spec.py`.
 
 ## iOS / macOS App
 

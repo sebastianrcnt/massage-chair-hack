@@ -1,0 +1,566 @@
+version: 1
+
+commands:
+  - code: "0303"
+    name: Power
+    role: press
+    release: "0355"
+    ui_label: Power
+  - code: "032D"
+    name: Timer
+    role: press
+    release: "0355"
+    note: "+5 min cycle"
+    ui_label: Timer
+  - code: "0322"
+    name: Pause / Resume
+    role: press
+    release: "0355"
+    ui_label: Pause
+  - code: "0330"
+    name: Heater
+    role: press
+    release: "0355"
+    ui_label: Heater
+  - code: "0327"
+    name: Speed
+    role: press
+    release: "0336"
+    note: manual mode only
+    ui_label: Speed
+  - code: "0363"
+    name: Manual mode
+    role: press
+    release: "0339"
+  - code: "0304"
+    name: Back recline
+    role: press
+    release: "0355"
+    note: Hold to move; stops at end of travel
+    ui_label: Back ↓
+  - code: "0302"
+    name: Back raise
+    role: press
+    release: "0355"
+    note: Hold to move; stops at end of travel
+    ui_label: Back ↑
+  - code: "0301"
+    name: Leg lower
+    role: press
+    release: "0355"
+    note: Hold to move; stops at end of travel
+    ui_label: Leg ↓
+  - code: "0307"
+    name: Leg raise
+    role: press
+    release: "0355"
+    note: Hold to move; stops at end of travel
+    ui_label: Leg ↑
+  - code: "0375"
+    name: Air mode
+    role: press
+    release: "0355"
+    note: Cycles through air massage modes
+    ui_label: Air
+  - code: "0315"
+    name: Air strength
+    role: press
+    release: "0355"
+    note: No ACK observed
+    ui_label: Air str
+  - code: "0331"
+    name: Foot roller
+    role: press
+    release: "0339"
+    ui_label: Foot roller
+  - code: "0314"
+    name: Massage area
+    role: press
+    release: "0355"
+    note: "Cycles short-status B4[b2:b1]: point/local/full"
+  - code: "032C"
+    name: Position up
+    role: press
+    release: "0355"
+    note: ACK 1103 (beep); chair sends 1100 after release
+    ui_label: Pos ↑
+  - code: "032F"
+    name: Position down
+    role: press
+    release: "0355"
+    note: ACK 1103 (beep); chair sends 1100 after release
+    ui_label: Pos ↓
+  - code: "0384"
+    name: Position reset
+    role: press
+    release: "0355"
+    note: ACK 1103 (beep); no 1100
+    ui_label: Reset
+  - code: "0306"
+    name: Zero gravity
+    role: press
+    release: "0355"
+    note: ACK 1103 (beep)
+    ui_label: Zero G
+  - code: "031F"
+    name: "Auto: Charging"
+    role: press
+    release: "0355"
+    note: 충전; resets timer to 15 min
+    ui_label: 충전
+    auto_mode: 충전
+  - code: "0391"
+    name: "Auto: Digestion"
+    role: press
+    release: "0355"
+    note: 소화; resets timer to 15 min
+    ui_label: 소화
+    auto_mode: 소화
+  - code: "0305"
+    name: "Auto: Classic"
+    role: press
+    release: "0355"
+    note: 클래식; resets timer to 15 min
+    ui_label: 클래식
+    auto_mode: 클래식
+  - code: "0321"
+    name: "Auto: Sleep"
+    role: press
+    release: "0355"
+    note: 숙면; resets timer to 15 min
+    ui_label: 숙면
+    auto_mode: 숙면
+  - code: "031E"
+    name: "Auto: Stretching"
+    role: press
+    release: "0336"
+    note: 스트레칭; resets timer to 15 min; unique release code
+    ui_label: 스트레칭
+    auto_mode: 스트레칭
+  - code: "0320"
+    name: "Auto: Healing"
+    role: press
+    release: "0355"
+    note: 힐링; resets timer to 15 min
+    ui_label: 힐링
+    auto_mode: 힐링
+  - code: "0364"
+    name: Width
+    role: press
+    release: "0355"
+    note: No ACK observed
+    ui_label: Width
+
+releases:
+  - code: "0355"
+    name: Release
+    role: release
+  - code: "0336"
+    name: Release
+    role: release
+    note: speed / stretch
+  - code: "0339"
+    name: Release
+    role: release
+    note: manual / roller
+
+acks:
+  - code: "1103"
+    name: Beep
+    role: ack
+    hypothesis: Single beep on remote
+    confidence: Tentative
+  - code: "1104"
+    name: Double beep
+    role: ack
+    hypothesis: Double beep on remote — cycle complete
+    note: "Sent when any cycle button wraps back to first step (confirmed: speed, air strength; likely: timer, others)"
+    confidence: Tentative
+  - code: "1100"
+    name: Position reached
+    role: ack
+    hypothesis: Unknown — observed after massage position up/down release only
+    note: Tentative - not seen after position reset; may signal head-unit reached target position
+    confidence: Tentative
+
+maps:
+  level_1_3_5:
+    0: "1"
+    1: "3"
+    3: "5"
+  width:
+    0: wide
+    1: medium
+    2: narrow
+  short_area:
+    0: point
+    1: local
+    2: full
+  seven_segment:
+    "3F": "0"
+    "06": "1"
+    "5B": "2"
+    "4F": "3"
+    "66": "4"
+    "6D": "5"
+    "7D": "6"
+    "07": "7"
+    "7F": "8"
+    "6F": "9"
+
+decode:
+  long:
+    air:
+      byte: 3
+      bit: 4
+      on: "1"
+      off: "0"
+    air_strength:
+      byte: 4
+      bits: [6, 5]
+      map: level_1_3_5
+    speed:
+      byte: 5
+      bits: [3, 2]
+      map: level_1_3_5
+    width:
+      byte: 6
+      bits: [1, 0]
+      map: width
+    foot_roller:
+      byte: 6
+      bit: 7
+      on: "1"
+      off: "0"
+    heater:
+      byte: last
+      bit: 1
+      on: "1"
+      off: "0"
+    motion_active:
+      byte: 6
+      bit: 4
+    back_raise:
+      byte: 6
+      bit: 2
+    back_recline:
+      byte: 6
+      bit: 3
+    leg_raise:
+      byte: 6
+      bit: 6
+    leg_recline:
+      byte: 6
+      bit: 5
+    timer:
+      tens_byte: 1
+      ones_high:
+        byte: 3
+        bits: [3, 0]
+      ones_low:
+        byte: 2
+        bits: [7, 4]
+  short:
+    area:
+      byte: 4
+      bits: [2, 1]
+      map: short_area
+
+blink_indicators:
+  manual_techniques:
+    - name: 주무름
+      original_label: 주무름
+      observed_motion: Kneading motion
+      byte: 3
+      bit: 6
+    - name: 주무름 두드림
+      original_label: 두드림
+      observed_motion: Kneading with tapping
+      byte: 4
+      bit: 1
+    - name: 롤링
+      original_label: 지압
+      observed_motion: Rollers move up/down while repeatedly widening and narrowing
+      byte: 3
+      bit: 7
+    - name: 롤링 두드림
+      original_label: 손날 두드림
+      observed_motion: Rolling pattern with tapping
+      byte: 4
+      bit: 2
+    - name: 느린 두드림
+      original_label: 시아추
+      observed_motion: Similar to rolling/tapping, but with lower tapping frequency
+      byte: 4
+      bit: 0
+    - name: 복합
+      original_label: 복합
+      observed_motion: Combination pattern
+      byte: 4
+      bit: 3
+  air_areas:
+    - id: wrist
+      label: 팔목
+      byte: 7
+      bit: 1
+    - id: shoulder
+      label: 어깨
+      byte: 7
+      bit: 0
+    - id: foot
+      label: 발
+      byte: 7
+      bit: 6
+    - id: calf
+      label: 종아리
+      byte: 7
+      bit: 5
+  roller_positions:
+    - id: bottom
+      label: Lowest
+      byte: 0
+      bit: 2
+    - id: lower
+      label: "2"
+      byte: 0
+      bit: 1
+    - id: lowerMiddle
+      label: "3"
+      byte: 0
+      bit: 0
+    - id: upperMiddle
+      label: "4"
+      byte: 8
+      bit: 7
+    - id: upper
+      label: "5"
+      byte: 8
+      bit: 6
+    - id: top
+      label: Highest
+      byte: 8
+      bit: 5
+
+known_masks:
+  long_length: 9
+  long:
+    - byte: 0
+      mask: 0x07
+      note: "B0 b2:b0 roller position blink"
+    - byte: 1
+      mask: 0xFF
+      note: B1 timer tens
+    - byte: 2
+      mask: 0xF0
+      note: B2 timer ones high nibble
+    - byte: 3
+      mask: 0xDF
+      note: "B3 b7:b6 manual blinks + b4 air + timer ones low nibble"
+    - byte: 4
+      mask: 0x7F
+      note: "B4 b6:b5 air strength + b4 manual indicator + b3:b0 manual technique blinks"
+    - byte: 5
+      mask: 0x0C
+      note: "B5 b3:b2 massage speed"
+    - byte: 6
+      mask: 0xFF
+      note: B6 foot roller, leg/back motion, width
+    - byte: 7
+      mask: 0x63
+      note: B7 b6/b5/b1/b0 air-area blinks
+    - byte: 8
+      mask: 0xE2
+      note: "B8 b7:b5 roller position blink + heater b1"
+  short_length: 5
+  short:
+    - byte: 0
+      mask: 0x00
+      note: unknown
+    - byte: 1
+      mask: 0x00
+      note: unknown
+    - byte: 2
+      mask: 0x00
+      note: unknown
+    - byte: 3
+      mask: 0x00
+      note: unknown
+    - byte: 4
+      mask: 0x06
+      note: "B4 b2:b1 massage area"
+
+status_maps:
+  long:
+    - range: B0[b7:b3]
+      name: Unknown flags
+      rule: Varies across samples
+      confidence: Unknown
+    - range: B0[b2:b0]
+      name: "Roller position blink: lower 3 positions"
+      rule: Default 1; bit blinks 0/1 about every 0.5 s as the roller passes that position. B0[b2] is the lowest mapped position
+      confidence: Tentative
+    - range: B1[b7:b0]
+      name: Timer tens 7-segment byte
+      rule: Direct lookup in the 7-segment table
+      confidence: Confirmed
+    - range: B2[b7:b4]
+      name: Timer ones segment low nibble
+      rule: "Becomes ones_segment[b3:b0]"
+      confidence: Confirmed
+    - range: B2[b3:b0]
+      name: Unknown flags
+      rule: Varies across samples
+      confidence: Unknown
+    - range: B3[b7]
+      name: "Manual: 롤링 blink"
+      rule: Default 1; blinks 0/1 when 롤링 is the active manual technique
+      confidence: Tentative
+    - range: B3[b6]
+      name: "Manual: 주무름 blink"
+      rule: Default 1; blinks 0/1 when 주무름 is the active manual technique
+      confidence: Tentative
+    - range: B3[b5]
+      name: Unknown flag
+      rule: Not mapped
+      confidence: Unknown
+    - range: B3[b4]
+      name: Air
+      rule: 1 -> on, 0 -> off
+      confidence: Tentative
+    - range: B3[b3:b0]
+      name: Timer ones segment high nibble
+      rule: "Becomes ones_segment[b7:b4]"
+      confidence: Confirmed
+    - range: B4[b7]
+      name: Unknown flag
+      rule: Not mapped
+      confidence: Unknown
+    - range: B4[b6:b5]
+      name: Air strength
+      rule: 00 -> lv 1, 01 -> lv 3, 11 -> lv 5, 10 reserved
+      confidence: Tentative
+    - range: B4[b5]
+      name: Air strength low bit
+      rule: With B4[b6]; 00 -> lv 1, 01 -> lv 3, 11 -> lv 5, 10 reserved
+      confidence: Tentative
+    - range: B4[b4]
+      name: Manual mode indicator
+      rule: 0 -> manual mode, 1 -> auto / non-manual mode
+      confidence: Tentative
+    - range: B4[b3]
+      name: "Manual: 복합 blink"
+      rule: Default 1; blinks 0/1 when 복합 active
+      confidence: Tentative
+    - range: B4[b2]
+      name: "Manual: 롤링 두드림 blink"
+      rule: Default 1; blinks 0/1 when 롤링 두드림 active
+      confidence: Tentative
+    - range: B4[b1]
+      name: "Manual: 주무름 두드림 blink"
+      rule: Default 1; blinks 0/1 when 주무름 두드림 active
+      confidence: Tentative
+    - range: B4[b0]
+      name: "Manual: 느린 두드림 blink"
+      rule: Default 1; blinks 0/1 when 느린 두드림 active
+      confidence: Tentative
+    - range: B5[b7:b4]
+      name: Unknown flags
+      rule: Not mapped
+      confidence: Unknown
+    - range: B5[b3:b2]
+      name: Massage speed
+      rule: 00 -> lv 1, 01 -> lv 3, 11 -> lv 5, 10 reserved
+      confidence: Tentative
+    - range: B5[b1:b0]
+      name: Unknown flags
+      rule: Not mapped
+      confidence: Unknown
+    - range: B6[b7]
+      name: Foot roller
+      rule: 1 -> on, 0 -> off
+      confidence: Tentative
+    - range: B6[b6]
+      name: Leg raise movement
+      rule: Blinks 0/1 about once per second while the leg rest is raising
+      confidence: Tentative
+    - range: B6[b5]
+      name: Leg recline movement
+      rule: Blinks 0/1 about once per second while the leg rest is reclining
+      confidence: Tentative
+    - range: B6[b4]
+      name: Chair movement active
+      rule: 1 while either back or leg movement is physically active; delayed until motion starts; 0 at rest or out of travel range
+      confidence: Tentative
+    - range: B6[b3]
+      name: Back recline movement
+      rule: Blinks 0/1 about once per second while the back is reclining
+      confidence: Tentative
+    - range: B6[b2]
+      name: Back raise movement
+      rule: Blinks 0/1 about once per second while the back is raising
+      confidence: Tentative
+    - range: B6[b1:b0]
+      name: Massage width
+      rule: 00 -> wide, 01 -> medium, 10 -> narrow, 11 reserved
+      confidence: Tentative
+    - range: B7[b7]
+      name: Unknown flag
+      rule: Usually observed as 1 in current samples
+      confidence: Unknown
+    - range: B7[b6]
+      name: "Air area: 발 blink"
+      rule: Default 0; blinks 1 about every 0.5 s when active. Multiple B7 air-area bits may blink at the same time
+      confidence: Tentative
+    - range: B7[b5]
+      name: "Air area: 종아리 blink"
+      rule: Default 0; blinks 1 about every 0.5 s when active. Multiple B7 air-area bits may blink at the same time
+      confidence: Tentative
+    - range: B7[b4:b2]
+      name: Unknown flags
+      rule: Not mapped
+      confidence: Unknown
+    - range: B7[b1]
+      name: "Air area: 팔목 blink"
+      rule: Default 0; blinks 1 about every 0.5 s when active. Multiple B7 air-area bits may blink at the same time
+      confidence: Tentative
+    - range: B7[b0]
+      name: "Air area: 어깨 blink"
+      rule: Default 0; blinks 1 about every 0.5 s when active. Multiple B7 air-area bits may blink at the same time
+      confidence: Tentative
+    - range: B8[b7:b5]
+      name: "Roller position blink: upper 3 positions"
+      rule: Default 1; bit blinks 0/1 about every 0.5 s as the roller passes that position. B8[b5] is the highest mapped position
+      confidence: Tentative
+    - range: B8[b4:b2], B8[b0]
+      name: Unknown flags
+      rule: Not mapped
+      confidence: Unknown
+    - range: last[b1]
+      name: Heater
+      rule: on when (last_byte & 0x02) != 0; otherwise off
+      confidence: Tentative
+  short:
+    - range: B0[b7:b0]
+      name: Unknown
+      rule: Observed 03, 00
+      confidence: Unknown
+    - range: B1[b7:b0]
+      name: Unknown
+      rule: Observed 15, 06
+      confidence: Unknown
+    - range: B2[b7:b0]
+      name: Unknown
+      rule: Observed 13, 06, 15
+      confidence: Unknown
+    - range: B3[b7:b0]
+      name: Unknown
+      rule: Not mapped
+      confidence: Unknown
+    - range: B4[b7:b3], B4[b0]
+      name: Unknown flags
+      rule: Not mapped
+      confidence: Unknown
+    - range: B4[b2:b1]
+      name: Massage area
+      rule: 00 -> point, 01 -> local, 10 -> full, 11 reserved
+      confidence: Tentative

@@ -111,24 +111,10 @@ final class ChairBLEManager: NSObject, ObservableObject {
     @Published var activeAirAreas: [ChairAirArea] = []
     @Published var rollerPosition: ChairRollerPosition?
 
-    private static let autoModeCodes: [String: String] = [
-        "031F": "충전",
-        "0391": "소화",
-        "0305": "클래식",
-        "0321": "숙면",
-        "031E": "스트레칭",
-        "0320": "힐링",
-    ]
+    private static let autoModeCodes = ChairSpec.autoModeCodes
 
     /// (name, byte index, bit mask). Each bit defaults to 1 and blinks 0/1 while its technique is active.
-    private static let manualTechniqueBits: [(name: String, byteIndex: Int, mask: UInt8)] = [
-        ("주무름",      3, 1 << 6),  // B3[b6]
-        ("롤링",        3, 1 << 7),  // B3[b7]
-        ("주무름 두드림", 4, 1 << 1),  // B4[b1]
-        ("롤링 두드림",  4, 1 << 2),  // B4[b2]
-        ("느린 두드림",  4, 1 << 0),  // B4[b0]
-        ("복합",        4, 1 << 3),  // B4[b3]
-    ]
+    private static let manualTechniqueBits = ChairSpec.manualTechniqueBits
 
     /// How long after observing a `0` on a manual-blink bit we consider that technique active.
     /// Chair pushes long status ~2x/sec; a 1.5 s window catches at least one blink low.
@@ -138,22 +124,10 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private var manualBitLastOne: [String: Date] = [:]
 
     /// B7 air-area bits default to 0 and blink high while selected. Multiple areas may blink together.
-    private static let airAreaBits: [(area: ChairAirArea, byteIndex: Int, mask: UInt8)] = [
-        (.wrist,    7, 1 << 1), // B7[b1]
-        (.shoulder, 7, 1 << 0), // B7[b0]
-        (.foot,     7, 1 << 6), // B7[b6]
-        (.calf,     7, 1 << 5), // B7[b5]
-    ]
+    private static let airAreaBits = ChairSpec.airAreaBits
 
     /// Roller-position bits default to 1 and blink low as the roller passes the position.
-    private static let rollerPositionBits: [(position: ChairRollerPosition, byteIndex: Int, mask: UInt8)] = [
-        (.bottom,      0, 1 << 2), // B0[b2]
-        (.lower,       0, 1 << 1), // B0[b1]
-        (.lowerMiddle, 0, 1 << 0), // B0[b0]
-        (.upperMiddle, 8, 1 << 7), // B8[b7]
-        (.upper,       8, 1 << 6), // B8[b6]
-        (.top,         8, 1 << 5), // B8[b5]
-    ]
+    private static let rollerPositionBits = ChairSpec.rollerPositionBits
 
     private static let airAreaBlinkWindow: TimeInterval = 1.3
     private static let rollerPositionBlinkWindow: TimeInterval = 1.3
@@ -395,10 +369,10 @@ final class ChairBLEManager: NSObject, ObservableObject {
     /// blinked within the blink window.
     private func updateManualState(from longHex: String) {
         let bytes = ChairDecode.bytes(from: longHex)
-        guard bytes.count >= 5,
-              let b4 = UInt8(bytes[4], radix: 16) else { return }
+        guard bytes.indices.contains(ChairSpec.manualIndicatorByteIndex),
+              let manualByte = UInt8(bytes[ChairSpec.manualIndicatorByteIndex], radix: 16) else { return }
 
-        let inManual = (b4 & 0x10) == 0
+        let inManual = (manualByte & ChairSpec.manualIndicatorMask) == 0
 
         if !inManual {
             if isManualMode || manualTechnique != nil || !manualBitLastZero.isEmpty || !manualBitLastOne.isEmpty {

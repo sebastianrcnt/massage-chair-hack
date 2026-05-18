@@ -25,7 +25,8 @@ LEGACY_CHUNK_SIZE = 5  # keep "OTA DATA <hex>" within a 20-byte GATT buffer
 LEGACY_MAX_DECIMAL = 1_000_000_000
 LEGACY_BOOT = (
     b"import os\n"
-    b"os.rename('m.py','main.py');os.rename('b.py','bridge_core.py');os.remove('boot.py')\n\t"
+    b"os.rename('m.py','main.py');os.rename('b.py','bridge_core.py');os.remove('boot.py')\n"
+    b"# \n"
 )
 
 

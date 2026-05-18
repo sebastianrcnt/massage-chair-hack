@@ -6,37 +6,60 @@ struct ContentView: View {
     @State private var showDevicePicker = false
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                if !ble.isConnected {
-                    ConnectionBanner(ble: ble) {
-                        ble.scan()
-                        showDevicePicker = true
-                    }
-                }
-                RemoteView(ble: ble)
+        TabView {
+            tab(title: "Chair", icon: "house.fill", label: "홈") {
+                HomeTab(ble: ble)
             }
-            .navigationTitle("Chair Sniffer")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Text("Chair Sniffer")
-                        .font(.headline)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
-                        .onLongPressGesture(minimumDuration: 0.6) {
-                            showDevTools = true
-                        }
-                }
+            tab(title: "자세", icon: "figure.seated.side", label: "자세") {
+                PostureTab(ble: ble)
+            }
+            tab(title: "마사지", icon: "hand.raised.fill", label: "마사지") {
+                MassageTab(ble: ble)
             }
         }
+        .tint(.chairTint)
         .sheet(isPresented: $showDevicePicker) {
             DevicePickerSheet(ble: ble, isPresented: $showDevicePicker)
         }
         .sheet(isPresented: $showDevTools) {
             DevToolsSheet(ble: ble, isPresented: $showDevTools)
         }
+    }
+
+    @ViewBuilder
+    private func tab<Content: View>(
+        title: String,
+        icon: String,
+        label: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        NavigationStack {
+            ZStack(alignment: .top) {
+                content()
+                if !ble.isConnected {
+                    ConnectionBanner(ble: ble) {
+                        ble.scan()
+                        showDevicePicker = true
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            showDevTools = true
+                        } label: {
+                            Label("Developer Tools", systemImage: "wrench.and.screwdriver")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+        }
+        .tabItem { Label(label, systemImage: icon) }
     }
 }
 

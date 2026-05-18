@@ -11,40 +11,24 @@ enum LiveStateLookup {
         let decoded = ble.decodedStatus
 
         switch code.uppercased() {
-        // Toggles
+        case "032D":
+            return timerState(decoded.timer)
         case "0330":
             return toggleState(decoded.heater)
         case "0375":
             return toggleState(decoded.air)
         case "0331":
             return toggleState(decoded.footRoller)
-
-        // Levels
         case "0315":
             return levelState(decoded.airStrength)
         case "0327":
             return levelState(decoded.speed)
         case "0364":
             return widthState(decoded.width)
-
-        // Auto modes
-        case "031F", "0391", "0305", "0321", "031E", "0320":
-            guard let label = autoModeLabels[code.uppercased()] else { return nil }
-            return ControlState(isOn: ble.currentAutoMode == label, label: nil)
-
         default:
             return nil
         }
     }
-
-    private static let autoModeLabels: [String: String] = [
-        "031F": "충전",
-        "0391": "소화",
-        "0305": "클래식",
-        "0321": "숙면",
-        "031E": "스트레칭",
-        "0320": "힐링",
-    ]
 
     private static func toggleState(_ value: String) -> ControlState? {
         switch value {
@@ -56,7 +40,7 @@ enum LiveStateLookup {
 
     private static func levelState(_ value: String) -> ControlState? {
         guard ["1", "3", "5"].contains(value) else { return nil }
-        return ControlState(isOn: false, label: "Lv \(value)")
+        return ControlState(isOn: false, label: "\(value)단")
     }
 
     private static func widthState(_ value: String) -> ControlState? {
@@ -66,5 +50,11 @@ enum LiveStateLookup {
         case "narrow": return ControlState(isOn: false, label: "좁게")
         default:       return nil
         }
+    }
+
+    private static func timerState(_ value: String) -> ControlState? {
+        guard value != "-" else { return nil }
+        let minutes = value.split(separator: " ").first.map(String.init) ?? value
+        return ControlState(isOn: false, label: "\(minutes)분")
     }
 }

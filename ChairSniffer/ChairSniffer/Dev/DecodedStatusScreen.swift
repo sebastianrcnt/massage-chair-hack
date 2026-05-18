@@ -66,6 +66,7 @@ struct StatusContent: View {
                 .font(.headline)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 220))], spacing: 10) {
                 MetricTile(title: "Timer", value: decoded.timer, icon: "timer")
+                MetricTile(title: "Auto Mode", value: ble.currentAutoMode ?? "-", icon: "sparkles")
                 MetricTile(title: "Area", value: decoded.area, icon: "scope")
                 MetricTile(title: "Air", value: decoded.air, icon: "wind")
                 MetricTile(title: "Air Level", value: decoded.airStrength, icon: "gauge.medium")

@@ -56,11 +56,11 @@ enum ChairSpec {
         "0384": .init(name: "Position reset", role: .press, note: "ACK 1103 (beep); no 1100"),
         "0306": .init(name: "Zero gravity", role: .press, note: "ACK 1103 (beep)"),
         "031F": .init(name: "Auto: Charging", role: .press, note: "충전; resets timer to 15 min"),
-        "0391": .init(name: "Auto: Digestion", role: .press, note: "소화; resets timer to 15 min"),
-        "0305": .init(name: "Auto: Classic", role: .press, note: "클래식; resets timer to 15 min"),
-        "0321": .init(name: "Auto: Sleep", role: .press, note: "숙면; resets timer to 15 min"),
-        "031E": .init(name: "Auto: Stretching", role: .press, note: "스트레칭; resets timer to 15 min; unique release code"),
         "0320": .init(name: "Auto: Healing", role: .press, note: "힐링; resets timer to 15 min"),
+        "031E": .init(name: "Auto: Stretching", role: .press, note: "스트레칭; resets timer to 15 min; unique release code"),
+        "0321": .init(name: "Auto: Sleep", role: .press, note: "숙면; resets timer to 15 min"),
+        "0305": .init(name: "Auto: Classic", role: .press, note: "클래식; resets timer to 15 min"),
+        "0391": .init(name: "Auto: Digestion", role: .press, note: "소화; resets timer to 15 min"),
         "0364": .init(name: "Width", role: .press, note: "No ACK observed"),
         "0355": .init(name: "Release", role: .release, note: nil),
         "0336": .init(name: "Release", role: .release, note: "speed / stretch"),
@@ -88,22 +88,32 @@ enum ChairSpec {
         (code: "0384", label: "Reset"),
         (code: "0306", label: "Zero G"),
         (code: "031F", label: "충전"),
-        (code: "0391", label: "소화"),
-        (code: "0305", label: "클래식"),
-        (code: "0321", label: "숙면"),
-        (code: "031E", label: "스트레칭"),
         (code: "0320", label: "힐링"),
+        (code: "031E", label: "스트레칭"),
+        (code: "0321", label: "숙면"),
+        (code: "0305", label: "클래식"),
+        (code: "0391", label: "소화"),
         (code: "0364", label: "Width"),
     ]
 
     static let autoModeCodes: [String: String] = [
         "031F": "충전",
-        "0391": "소화",
-        "0305": "클래식",
-        "0321": "숙면",
-        "031E": "스트레칭",
         "0320": "힐링",
+        "031E": "스트레칭",
+        "0321": "숙면",
+        "0305": "클래식",
+        "0391": "소화",
     ]
+
+    static let autoModeIndicatorBits: [(name: String, display: String, byteIndex: Int, mask: UInt8)] = [
+        (name: "충전", display: "A1", byteIndex: 1, mask: 0x80),
+        (name: "힐링", display: "A2", byteIndex: 0, mask: 0x01),
+        (name: "스트레칭", display: "A3", byteIndex: 0, mask: 0x02),
+        (name: "숙면", display: "A4", byteIndex: 0, mask: 0x04),
+        (name: "클래식", display: "A5", byteIndex: 1, mask: 0x08),
+    ]
+    static let autoModeAllIndicatorBitsZeroName = "소화"
+    static let autoModeAllIndicatorBitsZeroDisplay = "A6"
 
     static let manualTechniqueBits: [(name: String, byteIndex: Int, mask: UInt8)] = [
         (name: "주무름", byteIndex: 3, mask: 0x40),

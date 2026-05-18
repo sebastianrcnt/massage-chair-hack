@@ -110,6 +110,21 @@ def generate_swift(spec: dict[str, Any]) -> str:
             auto_modes.append(f"        {swift_string(row['code'])}: {swift_string(row['auto_mode'])},")
     auto_modes.append("    ]")
 
+    auto_indicator = spec["decode"]["short"]["auto_mode_indicator"]
+    auto_indicator_bits = ["    static let autoModeIndicatorBits: [(name: String, display: String, byteIndex: Int, mask: UInt8)] = ["]
+    auto_indicator_zero_name = ""
+    auto_indicator_zero_display = ""
+    for row in auto_indicator["modes"]:
+        if row.get("all_indicator_bits_zero"):
+            auto_indicator_zero_name = row["label"]
+            auto_indicator_zero_display = row["display"]
+        else:
+            auto_indicator_bits.append(
+                f"        (name: {swift_string(row['label'])}, display: {swift_string(row['display'])}, "
+                f"byteIndex: {row['byte']}, mask: 0x{bit_mask(row['bit']):02X}),"
+            )
+    auto_indicator_bits.append("    ]")
+
     manual_bits = ["    static let manualTechniqueBits: [(name: String, byteIndex: Int, mask: UInt8)] = ["]
     for row in spec["blink_indicators"]["manual_techniques"]:
         manual_bits.append(
@@ -198,6 +213,10 @@ def generate_swift(spec: dict[str, Any]) -> str:
         "\n".join(cheat),
         "",
         "\n".join(auto_modes),
+        "",
+        "\n".join(auto_indicator_bits),
+        f"    static let autoModeAllIndicatorBitsZeroName = {swift_string(auto_indicator_zero_name)}",
+        f"    static let autoModeAllIndicatorBitsZeroDisplay = {swift_string(auto_indicator_zero_display)}",
         "",
         "\n".join(manual_bits),
         "",

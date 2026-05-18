@@ -10,11 +10,11 @@ struct HomeTab: View {
 
     private let autoModes: [ControlItem] = [
         ControlItem(code: "031F", label: "충전",     icon: "battery.100"),
-        ControlItem(code: "0391", label: "소화",     icon: "sparkles"),
-        ControlItem(code: "0305", label: "클래식",   icon: "music.note"),
-        ControlItem(code: "0321", label: "숙면",     icon: "moon"),
-        ControlItem(code: "031E", label: "스트레칭", icon: "figure.cooldown", releaseCode: "0336"),
         ControlItem(code: "0320", label: "힐링",     icon: "heart"),
+        ControlItem(code: "031E", label: "스트레칭", icon: "figure.cooldown", releaseCode: "0336"),
+        ControlItem(code: "0321", label: "숙면",     icon: "moon"),
+        ControlItem(code: "0305", label: "클래식",   icon: "music.note"),
+        ControlItem(code: "0391", label: "소화",     icon: "sparkles"),
     ]
 
     var body: some View {

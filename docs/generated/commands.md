@@ -23,11 +23,11 @@
 | 0384 | Position reset | press | 0355 | Reset |  | ACK 1103 (beep); no 1100 |  |
 | 0306 | Zero gravity | press | 0355 | Zero G |  | ACK 1103 (beep) |  |
 | 031F | Auto: Charging | press | 0355 | 충전 | 충전 | 충전; resets timer to 15 min |  |
-| 0391 | Auto: Digestion | press | 0355 | 소화 | 소화 | 소화; resets timer to 15 min |  |
-| 0305 | Auto: Classic | press | 0355 | 클래식 | 클래식 | 클래식; resets timer to 15 min |  |
-| 0321 | Auto: Sleep | press | 0355 | 숙면 | 숙면 | 숙면; resets timer to 15 min |  |
-| 031E | Auto: Stretching | press | 0336 | 스트레칭 | 스트레칭 | 스트레칭; resets timer to 15 min; unique release code |  |
 | 0320 | Auto: Healing | press | 0355 | 힐링 | 힐링 | 힐링; resets timer to 15 min |  |
+| 031E | Auto: Stretching | press | 0336 | 스트레칭 | 스트레칭 | 스트레칭; resets timer to 15 min; unique release code |  |
+| 0321 | Auto: Sleep | press | 0355 | 숙면 | 숙면 | 숙면; resets timer to 15 min |  |
+| 0305 | Auto: Classic | press | 0355 | 클래식 | 클래식 | 클래식; resets timer to 15 min |  |
+| 0391 | Auto: Digestion | press | 0355 | 소화 | 소화 | 소화; resets timer to 15 min |  |
 | 0364 | Width | press | 0355 | Width |  | No ACK observed |  |
 | 0355 | Release | release |  |  |  |  |  |
 | 0336 | Release | release |  |  |  | speed / stretch |  |

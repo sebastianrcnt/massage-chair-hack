@@ -109,34 +109,6 @@ commands:
     note: 충전; resets timer to 15 min
     ui_label: 충전
     auto_mode: 충전
-  - code: "0391"
-    name: "Auto: Digestion"
-    role: press
-    release: "0355"
-    note: 소화; resets timer to 15 min
-    ui_label: 소화
-    auto_mode: 소화
-  - code: "0305"
-    name: "Auto: Classic"
-    role: press
-    release: "0355"
-    note: 클래식; resets timer to 15 min
-    ui_label: 클래식
-    auto_mode: 클래식
-  - code: "0321"
-    name: "Auto: Sleep"
-    role: press
-    release: "0355"
-    note: 숙면; resets timer to 15 min
-    ui_label: 숙면
-    auto_mode: 숙면
-  - code: "031E"
-    name: "Auto: Stretching"
-    role: press
-    release: "0336"
-    note: 스트레칭; resets timer to 15 min; unique release code
-    ui_label: 스트레칭
-    auto_mode: 스트레칭
   - code: "0320"
     name: "Auto: Healing"
     role: press
@@ -144,6 +116,34 @@ commands:
     note: 힐링; resets timer to 15 min
     ui_label: 힐링
     auto_mode: 힐링
+  - code: "031E"
+    name: "Auto: Stretching"
+    role: press
+    release: "0336"
+    note: 스트레칭; resets timer to 15 min; unique release code
+    ui_label: 스트레칭
+    auto_mode: 스트레칭
+  - code: "0321"
+    name: "Auto: Sleep"
+    role: press
+    release: "0355"
+    note: 숙면; resets timer to 15 min
+    ui_label: 숙면
+    auto_mode: 숙면
+  - code: "0305"
+    name: "Auto: Classic"
+    role: press
+    release: "0355"
+    note: 클래식; resets timer to 15 min
+    ui_label: 클래식
+    auto_mode: 클래식
+  - code: "0391"
+    name: "Auto: Digestion"
+    role: press
+    release: "0355"
+    note: 소화; resets timer to 15 min
+    ui_label: 소화
+    auto_mode: 소화
   - code: "0364"
     name: Width
     role: press

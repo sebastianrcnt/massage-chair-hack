@@ -377,6 +377,31 @@ final class ChairBLEManager: NSObject, ObservableObject {
         manualTechnique = nil
     }
 
+    private func updateAutoModeState(from shortHex: String) {
+        let bytes = ChairDecode.bytes(from: shortHex)
+        guard bytes.indices.contains(ChairSpec.manualIndicatorByteIndex) else { return }
+
+        guard !isManualMode else {
+            currentAutoMode = nil
+            return
+        }
+
+        let activeModes = ChairSpec.autoModeIndicatorBits.compactMap { entry -> String? in
+            guard bytes.indices.contains(entry.byteIndex),
+                  let value = UInt8(bytes[entry.byteIndex], radix: 16),
+                  value & entry.mask != 0 else { return nil }
+            return entry.name
+        }
+
+        if activeModes.count == 1 {
+            currentAutoMode = activeModes[0]
+        } else if activeModes.isEmpty {
+            currentAutoMode = ChairSpec.autoModeAllIndicatorBitsZeroName
+        } else {
+            currentAutoMode = activeModes.joined(separator: " / ")
+        }
+    }
+
     /// Inspects a long-status hex string and updates `manualTechnique` from the
     /// technique-blink bits (B3[b7], B3[b6], B4[b0..b3]).
     private func updateManualTechniqueState(from longHex: String) {
@@ -532,6 +557,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
             } else if payload.count > 5 {
                 latestShort = payload
                 updateManualModeState(from: payload)
+                updateAutoModeState(from: payload)
                 updateStableArea(from: payload)
             } else {
                 if payload == "1104" {

@@ -1,4 +1,4 @@
-name: TodoApp
+name: ChairSniffer
 options:
   bundleIdPrefix: com.siwonjeong
   deploymentTarget:
@@ -9,15 +9,15 @@ settings:
     CURRENT_PROJECT_VERSION: 1
     SWIFT_VERSION: 5.0
 targets:
-  TodoApp:
+  ChairSniffer:
     type: application
     platform: iOS
     sources:
-      - TodoApp
+      - ChairSniffer
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.siwonjeong.TodoApp
+        PRODUCT_BUNDLE_IDENTIFIER: com.siwonjeong.ChairSniffer
         DEVELOPMENT_TEAM: CYYK3A72BM
-        INFOPLIST_FILE: TodoApp/Info.plist
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_FILE: ChairSniffer/Info.plist
         CODE_SIGN_STYLE: Automatic
+        SUPPORTS_MACCATALYST: YES

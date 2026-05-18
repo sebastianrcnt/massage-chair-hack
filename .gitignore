@@ -13,3 +13,7 @@ wheels/
 # Local editor tooling
 compile_commands.json
 .cache/
+
+# Xcode build artifacts
+ChairSniffer/build/
+*.xcuserstate

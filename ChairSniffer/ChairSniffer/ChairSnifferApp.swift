@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct TodoApp: App {
+struct ChairSnifferApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

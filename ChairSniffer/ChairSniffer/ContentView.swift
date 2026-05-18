@@ -1,5 +1,22 @@
 import SwiftUI
 
+// MARK: - Display mode
+
+enum FrameDisplayMode: String, CaseIterable {
+    case hex = "HEX"
+    case binary = "BIN"
+    case octal = "OCT"
+
+    func format(_ hexByte: String) -> String {
+        guard let value = UInt8(hexByte, radix: 16) else { return hexByte }
+        switch self {
+        case .hex:    return hexByte.uppercased()
+        case .binary: return String(value, radix: 2).leftPad(to: 8)
+        case .octal:  return String(value, radix: 8).leftPad(to: 3)
+        }
+    }
+}
+
 // MARK: - Root
 
 struct ContentView: View {
@@ -179,6 +196,10 @@ private struct StatusContent: View {
     @ObservedObject var ble: ChairBLEManager
     var showConnection: Bool = true
 
+    @AppStorage("frameDisplayMode") private var displayMode = FrameDisplayMode.hex
+    @State private var prevShort = ""
+    @State private var prevLong = ""
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -191,6 +212,8 @@ private struct StatusContent: View {
             .screenPadding()
         }
         .background(Color(.systemGroupedBackground))
+        .onChange(of: ble.latestShort) { old, _ in prevShort = old }
+        .onChange(of: ble.latestLong)  { old, _ in prevLong  = old }
     }
 
     private var decodedPanel: some View {
@@ -217,10 +240,21 @@ private struct StatusContent: View {
 
     private var rawStatusPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Latest Frames")
-                .font(.headline)
-            RawLine(title: "Short", value: ble.latestShort)
-            RawLine(title: "Long",  value: ble.latestLong)
+            HStack {
+                Text("Latest Frames")
+                    .font(.headline)
+                Spacer()
+                Picker("Display", selection: $displayMode) {
+                    ForEach(FrameDisplayMode.allCases, id: \.self) {
+                        Text($0.rawValue).tag($0)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+                .accessibilityLabel("Byte display mode")
+            }
+            DiffRawLine(title: "Short", value: ble.latestShort, previous: prevShort, mode: displayMode)
+            DiffRawLine(title: "Long",  value: ble.latestLong,  previous: prevLong,  mode: displayMode)
         }
         .panelStyle()
     }
@@ -319,14 +353,35 @@ private struct CommandsContent: View {
 
 private struct RawFeedContent: View {
     @ObservedObject var ble: ChairBLEManager
+    @State private var isPaused = false
+    @State private var frozenText = ""
+    @State private var frozenCount = 0
+
+    var displayedText: String { isPaused ? frozenText : ble.rawTerminalText }
+    var displayedCount: Int   { isPaused ? frozenCount : ble.rawLogs.count }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Label("\(ble.rawLogs.count) kept", systemImage: "tray.full")
-                Text("\(ble.droppedRawLogCount) dropped")
-                    .foregroundStyle(.secondary)
+                Label("\(displayedCount) kept", systemImage: "tray.full")
+                if ble.droppedRawLogCount > 0 {
+                    Text("\(ble.droppedRawLogCount) dropped")
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
+                Button {
+                    if !isPaused {
+                        frozenText = ble.rawTerminalText
+                        frozenCount = ble.rawLogs.count
+                    }
+                    isPaused.toggle()
+                } label: {
+                    Label(isPaused ? "Resume" : "Pause",
+                          systemImage: isPaused ? "play.fill" : "pause.fill")
+                        .font(.caption.weight(.medium))
+                }
+                .buttonStyle(.bordered)
+                .tint(isPaused ? .orange : .primary)
             }
             .font(.caption)
             .padding(.horizontal, 16)
@@ -334,17 +389,31 @@ private struct RawFeedContent: View {
 
             ScrollViewReader { proxy in
                 ScrollView([.vertical, .horizontal]) {
-                    Text(ble.rawTerminalText.isEmpty ? "waiting for BLE notifications..." : ble.rawTerminalText)
-                        .id("terminal-end")
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(.green)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        .padding(12)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(displayedText.isEmpty ? "waiting for BLE notifications..." : displayedText)
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.green)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            .padding(12)
+                        Color.clear.frame(height: 1).id("terminal-end")
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.black, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(alignment: .topTrailing) {
+                    if isPaused {
+                        Text("PAUSED")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(.orange, in: RoundedRectangle(cornerRadius: 4))
+                            .padding(8)
+                    }
+                }
                 .onChange(of: ble.rawLogs.count) { _, _ in
+                    guard !isPaused else { return }
                     proxy.scrollTo("terminal-end", anchor: .bottom)
                 }
             }
@@ -566,23 +635,43 @@ private struct MetricTile: View {
     }
 }
 
-// MARK: - Raw line
+// MARK: - Diff raw line
 
-private struct RawLine: View {
+private struct DiffRawLine: View {
     let title: String
     let value: String
+    let previous: String
+    let mode: FrameDisplayMode
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text(value.isEmpty ? "Waiting..." : ChairDecode.spaced(value))
-                .font(.system(.footnote, design: .monospaced))
-                .foregroundStyle(value.isEmpty ? .secondary : .primary)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if value.isEmpty {
+                Text("Waiting...")
+                    .font(.system(.footnote, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(attributedBytes)
+                    .font(.system(.footnote, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+    }
+
+    private var attributedBytes: AttributedString {
+        let curBytes  = ChairDecode.bytes(from: value)
+        let prevBytes = ChairDecode.bytes(from: previous)
+        var result = AttributedString()
+        for (i, byte) in curBytes.enumerated() {
+            let changed = !previous.isEmpty && (i >= prevBytes.count || byte != prevBytes[i])
+            var part = AttributedString(mode.format(byte) + (i < curBytes.count - 1 ? " " : ""))
+            if changed { part.foregroundColor = .orange }
+            result.append(part)
+        }
+        return result
     }
 }
 
@@ -685,6 +774,13 @@ private extension View {
         self
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+    }
+}
+
+private extension String {
+    func leftPad(to length: Int) -> String {
+        let padding = max(0, length - count)
+        return String(repeating: "0", count: padding) + self
     }
 }
 

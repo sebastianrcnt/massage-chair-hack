@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "bleak>=3.0.2",
+    "esptool>=5.0",
+    "mpremote>=1.0",
     "textual>=8.2.6",
 ]
 

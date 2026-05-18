@@ -1,31 +1,28 @@
-.PHONY: build upload monitor devices clean compiledb monitor-app monitor-app-debug check-python test
+.PHONY: flash upload repl ota monitor test
 
-build:
-	uv run pio run
+PORT     ?= /dev/cu.usbserial-1110
+BLE_NAME ?= ChairSniffer-AFEF
+FIRMWARE ?= .cache/firmware/ESP32_GENERIC-20260406-v1.28.0.bin
+PY_FILES  = firmware/micropython/bridge_core.py firmware/micropython/main.py
+
+flash:
+	uv run esptool --port $(PORT) erase-flash
+	uv run esptool --port $(PORT) --baud 460800 write-flash -z 0x1000 $(FIRMWARE)
 
 upload:
-	uv run pio run --target upload
+	uv run mpremote connect $(PORT) \
+	  cp firmware/micropython/bridge_core.py :bridge_core.py + \
+	  cp firmware/micropython/main.py :main.py + \
+	  reset
+
+repl:
+	uv run mpremote connect $(PORT) repl
+
+ota:
+	uv run src/chair_ota.py --name $(BLE_NAME) --reboot $(PY_FILES)
 
 monitor:
-	uv run pio device monitor --baud 115200
-
-devices:
-	uv run pio device list
-
-clean:
-	uv run pio run --target clean
-
-compiledb:
-	uv run pio run -t compiledb
-
-monitor-app:
-	uv run src/chair_monitor.py
-
-monitor-app-debug:
-	uv run src/chair_monitor.py --debug
-
-check-python:
-	uv run python -m py_compile src/chair_decode.py src/chair_monitor.py
+	uv run src/chair_monitor.py --name $(BLE_NAME)
 
 test:
 	uv run pytest

@@ -8,11 +8,14 @@ This document tracks the current reverse-engineered status map. Byte positions a
 
 | Prefix | Source | Meaning |
 | --- | --- | --- |
-| `[Y]` | Chair status line, yellow wire | Chair-to-remote status broadcast |
-| `[W]` | Remote command line, white wire | Remote-to-chair command sniffing |
-| `[SENT]` | BLE monitor app | Command sent by this tool to the chair |
+| `[CHAIR]` | Chair status line, yellow wire | Chair-to-remote status broadcast |
+| `[REMOTE]` | Remote command line, white wire | Remote-to-chair command sniffing |
+| `[TRANSMITTED]` | BLE monitor app | Command transmitted by this tool to the chair |
+| `[ERROR]` | Bridge firmware | Error message |
 
-## Remote Commands (`[W]`)
+**App → ESP32 write format:** `SEND XXXX` where `XXXX` is a 4-digit hex command.
+
+## Remote Commands (`[REMOTE]`)
 
 | Button | Press | Release | Notes |
 | --- | --- | --- | --- |

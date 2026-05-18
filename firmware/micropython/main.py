@@ -68,8 +68,8 @@ class ChairBleBridge:
         )
         self.command_uart = self._open_command_rx()
 
-        self.status_frames = FrameBuffer(b"[Y] ")
-        self.command_frames = FrameBuffer(b"[W] ")
+        self.status_frames = FrameBuffer(b"[CHAIR] ")
+        self.command_frames = FrameBuffer(b"[REMOTE] ")
         self.connections = set()
         # Hand send_to_chair off to main loop; don't deinit/reinit UART in BLE IRQ.
         self.pending_command = None
@@ -137,7 +137,7 @@ class ChairBleBridge:
             if self.pending_command is None:
                 self.pending_command = payload
             else:
-                self.ble_send("[ERR] Busy; previous command pending")
+                self.ble_send("[ERROR] Busy; previous command pending")
 
     def ble_send(self, message):
         data = message.encode()
@@ -170,7 +170,7 @@ class ChairBleBridge:
 
         self.command_uart.deinit()
         self.command_uart = self._open_command_rx()
-        self.ble_send("[SENT] " + command)
+        self.ble_send("[TRANSMITTED] " + command)
 
     def _send_line(self, message):
         self.led.on()

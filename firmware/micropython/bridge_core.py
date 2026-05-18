@@ -11,7 +11,7 @@ BLE_COMMAND_IGNORE = "ignore"
 BLE_COMMAND_ERROR = "error"
 BLE_COMMAND_SEND = "send"
 
-FRAME_OVERLONG_ERROR = "[ERR] Dropped overlong frame"
+FRAME_OVERLONG_ERROR = "[ERROR] Dropped overlong frame"
 
 
 def advertising_payload(name):
@@ -54,17 +54,23 @@ def is_hex_command(value):
 
 def parse_ble_write(value):
     try:
-        command = value.decode().strip()
+        text = value.decode().strip()
     except UnicodeError:
-        return BLE_COMMAND_ERROR, "[ERR] Command must be UTF-8 text"
+        return BLE_COMMAND_ERROR, "[ERROR] Command must be UTF-8 text"
 
-    if not command:
+    if not text:
         return BLE_COMMAND_IGNORE, ""
-    if command.startswith("PIN:"):
-        return BLE_COMMAND_ERROR, "[ERR] PIN is not supported by MicroPython firmware"
-    if not is_hex_command(command):
-        return BLE_COMMAND_ERROR, "[ERR] Invalid command. Use 4 hex digits"
-    return BLE_COMMAND_SEND, command.upper()
+
+    parts = text.split(None, 1)
+    verb = parts[0].upper()
+    arg = parts[1].strip() if len(parts) > 1 else ""
+
+    if verb == "SEND":
+        if not is_hex_command(arg):
+            return BLE_COMMAND_ERROR, "[ERROR] SEND requires 4 hex digits"
+        return BLE_COMMAND_SEND, arg.upper()
+
+    return BLE_COMMAND_ERROR, "[ERROR] Unknown command. Supported: SEND XXXX"
 
 
 def decode_line(line):

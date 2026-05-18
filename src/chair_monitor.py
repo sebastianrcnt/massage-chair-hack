@@ -468,7 +468,7 @@ class ChairMonitor(App):
             with Vertical(id="raw-panel"):
                 yield Label(" Raw Feed", id="raw-title")
                 yield RichLog(highlight=True, markup=True, wrap=True, id="raw-log")
-        yield Input(placeholder="Command: 4-digit hex (e.g. 0303) or PIN:XXXXXX - Enter to send")
+        yield Input(placeholder="Command: 4-digit hex (e.g. 0303) — Enter to send")
         yield Footer()
 
     async def on_mount(self) -> None:
@@ -555,19 +555,18 @@ class ChairMonitor(App):
         entry.append(f"{now}  ", style="dim")
         if kind == "ack":
             entry.append("← ", style="yellow")
-            entry.append("[Y] ", style="bold yellow")
+            entry.append("[CHAIR] ", style="bold yellow")
             entry.append(format_bytes(data, self.display_mode), style="bold white")
         elif kind == "write":
             entry.append("→ ", style="green")
-            entry.append("[W] ", style="bold green")
+            entry.append("[REMOTE] ", style="bold green")
             entry.append(format_bytes(data, self.display_mode), style="bold white")
         elif kind == "sent":
             entry.append("⚡ ", style="magenta")
-            entry.append("[SENT] ", style="bold magenta")
+            entry.append("[TRANSMITTED] ", style="bold magenta")
             entry.append(format_bytes(data, self.display_mode), style="bold white")
         else:
-            style = "bold green" if data.startswith("[PIN]") else "bold red"
-            entry.append(data, style=style)
+            entry.append(data, style="bold red")
         return entry
 
     def _append_cmd_entry(self, kind: str, now: str, data: str) -> None:
@@ -598,8 +597,8 @@ class ChairMonitor(App):
         raw_log.write(Text(f"{now}  {text}", style="dim"))
 
         # Parse
-        if text.startswith("[Y] "):
-            data = text[4:]
+        if text.startswith("[CHAIR] "):
+            data = text[8:]
             data_len = len(data)
 
             if data_len <= 5:
@@ -614,14 +613,14 @@ class ChairMonitor(App):
                 status.update_long(data)
                 self.query_one("#decoded-box", DecodedPanel).update_long(data)
 
-        elif text.startswith("[W] "):
-            self._append_cmd_entry("write", now, text[4:])
+        elif text.startswith("[REMOTE] "):
+            self._append_cmd_entry("write", now, text[9:])
 
-        elif text.startswith("[SENT] "):
-            self._append_cmd_entry("sent", now, text[7:])
+        elif text.startswith("[TRANSMITTED] "):
+            self._append_cmd_entry("sent", now, text[14:])
 
-        elif text.startswith("[PIN] ") or text.startswith("[ERR] "):
-            self._append_cmd_entry("pin_err", now, text)
+        elif text.startswith("[ERROR] "):
+            self._append_cmd_entry("error", now, text)
 
     def notification_handler(self, sender, data: bytearray) -> None:
         """Called by bleak when ESP32 sends a notification."""
@@ -749,14 +748,10 @@ class ChairMonitor(App):
             event.input.clear()
             return
 
-        # Validate
-        is_pin_cmd = cmd.startswith("PIN:") and len(cmd) == 10 and cmd[4:].isdigit()
-        is_chair_cmd = is_hex_code(cmd, 4)
-
-        if not is_pin_cmd and not is_chair_cmd:
+        if not is_hex_code(cmd, 4):
             cmd_log.write(
                 Text(
-                    f"Invalid: '{cmd}'. Use 4-digit hex or PIN:XXXXXX",
+                    f"Invalid: '{cmd}'. Use 4-digit hex (e.g. 0303)",
                     style="bold red",
                 )
             )
@@ -764,10 +759,7 @@ class ChairMonitor(App):
             return
 
         now = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-        if is_pin_cmd:
-            label = f"PIN change: {cmd}"
-        else:
-            label = f"Sending: ~{cmd}\\r"
+        label = f"Sending: SEND {cmd}"
 
         entry = Text()
         entry.append(f"{now}  ", style="dim")
@@ -777,7 +769,7 @@ class ChairMonitor(App):
 
         try:
             await self.ble_client.write_gatt_char(
-                CHAR_CMD_UUID, cmd.encode("utf-8"), response=True
+                CHAR_CMD_UUID, f"SEND {cmd}".encode("utf-8"), response=True
             )
         except Exception as e:
             cmd_log.write(Text(f"Send failed: {e}", style="bold red"))

@@ -128,7 +128,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
         }
 
         appendCommand(.appToChair, "App -> Chair  \(ChairDecode.spaced(normalized))")
-        peripheral.writeValue(Data(normalized.utf8), for: commandCharacteristic, type: .withResponse)
+        peripheral.writeValue(Data("SEND \(normalized)".utf8), for: commandCharacteristic, type: .withResponse)
     }
 
     private var bluetoothStateText: String {
@@ -173,20 +173,6 @@ final class ChairBLEManager: NSObject, ObservableObject {
         onDrop?(overflow)
     }
 
-    private func commandLabel(for prefix: String, payload: String) -> String {
-        let spaced = ChairDecode.spaced(payload)
-        switch prefix {
-        case "[W]":
-            return "Remote -> Chair: \(spaced)"
-        case "[Y]":
-            return "Chair -> Remote: \(spaced)"
-        case "[SENT]":
-            return "App -> Chair: \(spaced)"
-        default:
-            return "\(prefix) \(spaced)"
-        }
-    }
-
     private func handleNotification(_ data: Data) {
         guard let text = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else {
@@ -196,20 +182,20 @@ final class ChairBLEManager: NSObject, ObservableObject {
         notifyCount += 1
         appendRaw(.status, text)
 
-        if text.hasPrefix("[Y] ") {
-            let payload = String(text.dropFirst(4))
+        if text.hasPrefix("[CHAIR] ") {
+            let payload = String(text.dropFirst(8))
             if payload.count > 12 {
                 latestLong = payload
             } else if payload.count > 5 {
                 latestShort = payload
             } else {
-                appendCommand(.chairToRemote, commandLabel(for: "[Y]", payload: payload))
+                appendCommand(.chairToRemote, "Chair -> Remote: \(ChairDecode.spaced(payload))")
             }
-        } else if text.hasPrefix("[W] ") {
-            appendCommand(.remoteToChair, commandLabel(for: "[W]", payload: String(text.dropFirst(4))))
-        } else if text.hasPrefix("[SENT] ") {
-            appendCommand(.appToChair, commandLabel(for: "[SENT]", payload: String(text.dropFirst(7))))
-        } else if text.hasPrefix("[ERR] ") {
+        } else if text.hasPrefix("[REMOTE] ") {
+            appendCommand(.remoteToChair, "Remote -> Chair: \(ChairDecode.spaced(String(text.dropFirst(9))))")
+        } else if text.hasPrefix("[TRANSMITTED] ") {
+            appendCommand(.appToChair, "App -> Chair: \(ChairDecode.spaced(String(text.dropFirst(14))))")
+        } else if text.hasPrefix("[ERROR] ") {
             appendCommand(.error, text)
             appendSystem(.error, text)
         }

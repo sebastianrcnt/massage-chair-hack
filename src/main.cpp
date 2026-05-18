@@ -1,3 +1,4 @@
+// DEPRECATED: superseded by firmware/micropython/main.py
 #include <Arduino.h>
 #include <BLE2902.h>
 #include <BLEDevice.h>

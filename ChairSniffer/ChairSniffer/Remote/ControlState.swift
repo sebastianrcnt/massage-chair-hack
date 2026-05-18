@@ -14,7 +14,7 @@ enum LiveStateLookup {
         case "032D":
             return timerState(decoded.timer)
         case "0363":
-            return ControlState(isOn: ble.isManualMode, label: ble.manualTechnique ?? (ble.isManualMode ? "수동" : nil))
+            return ControlState(isOn: ble.isManualMode, label: ble.manualTechnique ?? "수동")
         case "0330":
             return toggleState(decoded.heater)
         case "0375":
@@ -26,6 +26,9 @@ enum LiveStateLookup {
         case "0327":
             return speedState(decoded.speed)
         case "0364":
+            if ble.isWidthAutoCycling {
+                return ControlState(isOn: false, label: "자동")
+            }
             return widthState(decoded.width)
         default:
             return nil

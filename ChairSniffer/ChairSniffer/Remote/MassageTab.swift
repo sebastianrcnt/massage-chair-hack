@@ -4,14 +4,14 @@ struct MassageTab: View {
     @ObservedObject var ble: ChairBLEManager
     let onStatusTap: () -> Void
 
-    private let speed      = ControlItem(code: "0327", label: "속도", emphasizesState: true)
+    private let speed      = ControlItem(code: "0327", label: "속도", emphasizesState: true, releaseCode: "0336")
     private let width      = ControlItem(code: "0364", label: "폭", emphasizesState: true)
-    private let footRoller = ControlItem(code: "0331", label: "발롤러", icon: "circle.dotted")
+    private let footRoller = ControlItem(code: "0331", label: "발롤러", icon: "circle.dotted", releaseCode: "0339")
     private let heater     = ControlItem(code: "0330", label: "온열",   icon: "heat.waves")
     private let air        = ControlItem(code: "0375", label: "에어",     icon: "pillow.fill")
     private let airLevel   = ControlItem(code: "0315", label: "에어 세기", emphasizesState: true)
 
-    private let manual   = ControlItem(code: "0363", label: "수동", emphasizesState: true)
+    private let manual   = ControlItem(code: "0363", label: "수동", emphasizesState: true, releaseCode: "0339")
     private let headUp   = ControlItem(code: "032C", label: "헤드 올리기", icon: "arrow.up")
     private let headDown = ControlItem(code: "032F", label: "헤드 내리기", icon: "arrow.down")
 
@@ -76,7 +76,7 @@ struct MassageTab: View {
             state: LiveStateLookup.state(for: item.code, ble: ble),
             minHeight: minHeight,
             onPress: { ble.send(command: $0) },
-            onRelease: { ble.send(command: "0355") }
+            onRelease: { ble.send(command: item.releaseCode) }
         )
     }
 }

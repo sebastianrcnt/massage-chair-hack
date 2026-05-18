@@ -67,6 +67,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     @Published var systemLogs: [ChairLogEntry] = []
     @Published var droppedRawLogCount = 0
     @Published var currentAutoMode: String?
+    @Published var isWidthAutoCycling = false
     /// The peripheral currently being connected to (spinner state) or already connected (idle/active).
     /// Cleared on failure, intentional disconnect, or unintentional drop.
     @Published var activeDeviceId: UUID?
@@ -123,6 +124,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private var connectedDeviceName: String?
     private var intentionalDisconnect = false
     private var autoReconnectTargetId: UUID?
+    private var recentWidthSamples: [(value: String, date: Date)] = []
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -322,6 +324,8 @@ final class ChairBLEManager: NSObject, ObservableObject {
         manualBitLastZero.removeAll()
         isManualMode = false
         manualTechnique = nil
+        recentWidthSamples.removeAll()
+        isWidthAutoCycling = false
     }
 
     /// Inspects a long-status hex string and updates `isManualMode` /
@@ -364,6 +368,18 @@ final class ChairBLEManager: NSObject, ObservableObject {
             .filter { $0.value > cutoff }
             .max { $0.value < $1.value }
         manualTechnique = mostRecent?.key
+    }
+
+    private func updateWidthAutoState(from longHex: String) {
+        let width = ChairDecode.decode(short: "", long: longHex).width
+        guard ["wide", "medium", "narrow"].contains(width) else { return }
+
+        let now = Date()
+        recentWidthSamples.append((width, now))
+        recentWidthSamples.removeAll { now.timeIntervalSince($0.date) > 1.6 }
+
+        let distinct = Set(recentWidthSamples.map(\.value))
+        isWidthAutoCycling = distinct.count >= 3
     }
 
     private func appendRaw(_ kind: ChairLogEntry.Kind, _ text: String) {
@@ -420,6 +436,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
             if payload.count > 12 {
                 latestLong = payload
                 updateManualState(from: payload)
+                updateWidthAutoState(from: payload)
             } else if payload.count > 5 {
                 latestShort = payload
             } else {

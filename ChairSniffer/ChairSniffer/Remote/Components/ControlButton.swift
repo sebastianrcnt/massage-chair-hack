@@ -13,15 +13,17 @@ struct ControlItem: Identifiable {
     let icon: String?
     let prominence: Prominence
     let emphasizesState: Bool
+    let releaseCode: String
 
     var id: String { code + label }
 
-    init(code: String, label: String, icon: String? = nil, prominence: Prominence = .normal, emphasizesState: Bool = false) {
+    init(code: String, label: String, icon: String? = nil, prominence: Prominence = .normal, emphasizesState: Bool = false, releaseCode: String = "0355") {
         self.code = code
         self.label = label
         self.icon = icon
         self.prominence = prominence
         self.emphasizesState = emphasizesState
+        self.releaseCode = releaseCode
     }
 }
 

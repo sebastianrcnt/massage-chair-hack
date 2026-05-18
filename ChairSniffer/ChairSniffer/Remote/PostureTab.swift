@@ -63,7 +63,7 @@ struct PostureTab: View {
             state: LiveStateLookup.state(for: item.code, ble: ble),
             minHeight: minHeight,
             onPress: { ble.send(command: $0) },
-            onRelease: { ble.send(command: "0355") }
+            onRelease: { ble.send(command: item.releaseCode) }
         )
     }
 }

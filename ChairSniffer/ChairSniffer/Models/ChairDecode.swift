@@ -167,7 +167,8 @@ enum ChairDecode {
             return "-"
         }
 
-        return [0x09: "point", 0x0D: "full", 0x0B: "local"][value] ?? "reserved"
+        let areaBits = (value & 0x06) >> 1
+        return [0: "point", 1: "local", 2: "full"][areaBits] ?? "reserved"
     }
 }
 

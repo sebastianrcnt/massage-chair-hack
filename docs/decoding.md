@@ -246,7 +246,8 @@ newer observations include at least 5 bytes.
 | `B1[b7:b0]` | Unknown | Observed `15`, `06` | Unknown |
 | `B2[b7:b0]` | Unknown | Observed `13`, `06`, `15` | Unknown |
 | `B3[b7:b0]` | Unknown | Not mapped | Unknown |
-| `B4[b7:b0]` | Massage area | `09` -> point, `0D` -> full, `0B` -> local, other values reserved | Tentative |
+| `B4[b7:b3], B4[b0]` | Unknown flags | Not mapped | Unknown |
+| `B4[b2:b1]` | Massage area | `00` -> point, `01` -> local, `10` -> full, `11` reserved | Tentative |
 
 ### Observed Short Samples
 

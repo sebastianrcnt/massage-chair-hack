@@ -24,7 +24,6 @@ struct ControlItem: Identifiable {
 
 struct RemoteCommandPad: View {
     let availableWidth: CGFloat
-    @Binding var autoSendRelease: Bool
     let onPress: (String) -> Void
     let onRelease: () -> Void
 
@@ -74,14 +73,12 @@ struct RemoteCommandPad: View {
                     ControlCommandButton(
                         item: power,
                         minHeight: 58,
-                        autoSendRelease: autoSendRelease,
                         onPress: onPress,
                         onRelease: onRelease
                     )
                     ControlCommandButton(
                         item: pause,
                         minHeight: 58,
-                        autoSendRelease: autoSendRelease,
                         onPress: onPress,
                         onRelease: onRelease
                     )
@@ -100,7 +97,6 @@ struct RemoteCommandPad: View {
                     ControlCommandButton(
                         item: zeroG,
                         minHeight: 86,
-                        autoSendRelease: autoSendRelease,
                         onPress: onPress,
                         onRelease: onRelease
                     )
@@ -140,21 +136,11 @@ struct RemoteCommandPad: View {
                         ControlCommandButton(
                             item: item,
                             minHeight: 48,
-                            autoSendRelease: autoSendRelease,
                             onPress: onPress,
                             onRelease: onRelease
                         )
                     }
                 }
-
-                Toggle(isOn: $autoSendRelease) {
-                    Label("Auto Release", systemImage: "arrow.up.circle")
-                }
-                .font(.footnote.weight(.medium))
-                .tint(.green)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
             }
             .padding(14)
             .frame(width: padWidth)
@@ -189,7 +175,6 @@ struct RemoteCommandPad: View {
         ControlCommandButton(
             item: item,
             minHeight: 54,
-            autoSendRelease: autoSendRelease,
             onPress: onPress,
             onRelease: onRelease
         )
@@ -200,7 +185,6 @@ struct RemoteCommandPad: View {
         ControlCommandButton(
             item: item,
             minHeight: 54,
-            autoSendRelease: autoSendRelease,
             onPress: onPress,
             onRelease: onRelease
         )
@@ -215,14 +199,12 @@ struct RemoteCommandPad: View {
             ControlCommandButton(
                 item: top,
                 minHeight: 46,
-                autoSendRelease: autoSendRelease,
                 onPress: onPress,
                 onRelease: onRelease
             )
             ControlCommandButton(
                 item: bottom,
                 minHeight: 46,
-                autoSendRelease: autoSendRelease,
                 onPress: onPress,
                 onRelease: onRelease
             )
@@ -234,7 +216,6 @@ struct RemoteCommandPad: View {
 private struct ControlCommandButton: View {
     let item: ControlItem
     var minHeight: CGFloat = 64
-    let autoSendRelease: Bool
     let onPress: (String) -> Void
     let onRelease: () -> Void
 
@@ -257,13 +238,12 @@ private struct ControlCommandButton: View {
         .buttonStyle(PressReleaseCommandButtonStyle(
             code: item.code,
             prominence: item.prominence,
-            autoSendRelease: autoSendRelease,
             onPress: onPress,
             onRelease: onRelease
         ))
         .accessibilityAction {
             onPress(item.code)
-            if autoSendRelease { onRelease() }
+            onRelease()
         }
     }
 
@@ -294,7 +274,6 @@ private struct ControlCommandButton: View {
 private struct PressReleaseCommandButtonStyle: ButtonStyle {
     let code: String
     let prominence: ControlItem.Prominence
-    let autoSendRelease: Bool
     let onPress: (String) -> Void
     let onRelease: () -> Void
 
@@ -303,7 +282,6 @@ private struct PressReleaseCommandButtonStyle: ButtonStyle {
             configuration: configuration,
             code: code,
             prominence: prominence,
-            autoSendRelease: autoSendRelease,
             onPress: onPress,
             onRelease: onRelease
         )
@@ -314,7 +292,6 @@ private struct PressReleaseCommandButtonBody: View {
     let configuration: ButtonStyle.Configuration
     let code: String
     let prominence: ControlItem.Prominence
-    let autoSendRelease: Bool
     let onPress: (String) -> Void
     let onRelease: () -> Void
 
@@ -341,9 +318,7 @@ private struct PressReleaseCommandButtonBody: View {
                     onPress(code)
                 } else if !isPressed && wasPressed {
                     wasPressed = false
-                    if autoSendRelease {
-                        onRelease()
-                    }
+                    onRelease()
                 }
             }
     }

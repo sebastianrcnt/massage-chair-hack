@@ -1,73 +1,5 @@
 import SwiftUI
 
-struct CommandsContent: View {
-    private enum CommandPage: String, CaseIterable {
-        case remote = "Remote"
-        case hex = "Hex"
-        case log = "Log"
-
-        var icon: String {
-            switch self {
-            case .remote: return "rectangle.grid.3x2"
-            case .hex: return "keyboard"
-            case .log: return "bubble.left.and.bubble.right"
-            }
-        }
-    }
-
-    @ObservedObject var ble: ChairBLEManager
-    @AppStorage("autoSendRelease") private var autoSendRelease = true
-    @State private var page = CommandPage.remote
-
-    var body: some View {
-        VStack(spacing: 0) {
-            pagePicker
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color(.secondarySystemBackground))
-
-            Group {
-                switch page {
-                case .remote:
-                    controlsArea
-                case .hex:
-                    CustomHexScreen(ble: ble, showsNavigationTitle: false)
-                case .log:
-                    CommandLogContent(ble: ble)
-                }
-            }
-        }
-        .background(Color(.systemGroupedBackground))
-    }
-
-    private var pagePicker: some View {
-        Picker("Command page", selection: $page) {
-            ForEach(CommandPage.allCases, id: \.self) { item in
-                Label(item.rawValue, systemImage: item.icon)
-                    .tag(item)
-            }
-        }
-        .pickerStyle(.segmented)
-    }
-
-    private var controlsArea: some View {
-        GeometryReader { geo in
-            ScrollView {
-                RemoteCommandPad(
-                    availableWidth: geo.size.width,
-                    autoSendRelease: $autoSendRelease
-                ) { code in
-                    ble.send(command: code)
-                } onRelease: {
-                    ble.send(command: "0355")
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-            }
-        }
-    }
-}
-
 struct CommandLogContent: View {
     @ObservedObject var ble: ChairBLEManager
 
@@ -91,7 +23,7 @@ struct CommandLogContent: View {
                             }
                         }
                         .padding(.horizontal, 14)
-                        .padding(.bottom, 8)
+                        .padding(.vertical, 10)
                     }
                 }
                 .onChange(of: ble.commandLogs.count) { _, _ in

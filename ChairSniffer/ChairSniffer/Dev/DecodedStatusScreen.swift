@@ -84,11 +84,18 @@ struct StatusContent: View {
                 MetricTile(title: "Back", value: decoded.back, icon: "arrow.up.and.down")
                 MetricTile(title: "Leg", value: decoded.leg, icon: "arrow.up.forward")
                 MetricTile(title: "Width", value: decoded.width, icon: "arrow.left.and.right")
+                MetricTile(title: "Air Areas", value: airAreasText, icon: "wind.circle")
+                MetricTile(title: "Roller Position", value: ble.rollerPosition?.label ?? "-", icon: "arrow.up.and.down.circle")
                 MetricTile(title: "Foot Roller", value: decoded.footRoller, icon: "circle.dotted")
                 MetricTile(title: "Heater", value: decoded.heater, icon: "heat.waves")
             }
         }
         .panelStyle()
+    }
+
+    private var airAreasText: String {
+        let areas = ble.activeAirAreas.map(\.rawValue)
+        return areas.isEmpty ? "-" : areas.joined(separator: " · ")
     }
 
     private var rawStatusPanel: some View {

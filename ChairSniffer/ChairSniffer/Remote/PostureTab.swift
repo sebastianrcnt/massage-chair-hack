@@ -4,10 +4,10 @@ struct PostureTab: View {
     @ObservedObject var ble: ChairBLEManager
     let onStatusTap: () -> Void
 
-    private let backRaise   = ControlItem(code: "0302", label: "세우기", icon: "chevron.up")
-    private let backRecline = ControlItem(code: "0304", label: "눕히기", icon: "chevron.down")
-    private let legRaise    = ControlItem(code: "0307", label: "올리기", icon: "chevron.up")
-    private let legLower    = ControlItem(code: "0301", label: "내리기", icon: "chevron.down")
+    private let backRaise   = ControlItem(code: "0302", label: "세우기", icon: "chevron.up", repeatsProgressHaptics: true)
+    private let backRecline = ControlItem(code: "0304", label: "눕히기", icon: "chevron.down", repeatsProgressHaptics: true)
+    private let legRaise    = ControlItem(code: "0307", label: "올리기", icon: "chevron.up", repeatsProgressHaptics: true)
+    private let legLower    = ControlItem(code: "0301", label: "내리기", icon: "chevron.down", repeatsProgressHaptics: true)
 
     private let zeroG = ControlItem(code: "0306", label: "무중력", icon: "figure.flexibility")
     private let reset = ControlItem(code: "0384", label: "원위치", icon: "arrow.counterclockwise")

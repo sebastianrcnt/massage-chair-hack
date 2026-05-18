@@ -14,16 +14,24 @@ struct ControlItem: Identifiable {
     let prominence: Prominence
     let emphasizesState: Bool
     let releaseCode: String
+    let repeatsProgressHaptics: Bool
 
     var id: String { code + label }
 
-    init(code: String, label: String, icon: String? = nil, prominence: Prominence = .normal, emphasizesState: Bool = false, releaseCode: String = "0355") {
+    init(code: String,
+         label: String,
+         icon: String? = nil,
+         prominence: Prominence = .normal,
+         emphasizesState: Bool = false,
+         releaseCode: String = "0355",
+         repeatsProgressHaptics: Bool = false) {
         self.code = code
         self.label = label
         self.icon = icon
         self.prominence = prominence
         self.emphasizesState = emphasizesState
         self.releaseCode = releaseCode
+        self.repeatsProgressHaptics = repeatsProgressHaptics
     }
 }
 
@@ -45,6 +53,7 @@ struct ControlCommandButton: View {
         .buttonStyle(PressReleaseCommandButtonStyle(
             code: item.code,
             prominence: effectiveProminence,
+            repeatsProgressHaptics: item.repeatsProgressHaptics,
             onPress: onPress,
             onRelease: onRelease
         ))
@@ -123,6 +132,7 @@ struct ControlCommandButton: View {
 private struct PressReleaseCommandButtonStyle: ButtonStyle {
     let code: String
     let prominence: ControlItem.Prominence
+    let repeatsProgressHaptics: Bool
     let onPress: (String) -> Void
     let onRelease: () -> Void
 
@@ -131,6 +141,7 @@ private struct PressReleaseCommandButtonStyle: ButtonStyle {
             configuration: configuration,
             code: code,
             prominence: prominence,
+            repeatsProgressHaptics: repeatsProgressHaptics,
             onPress: onPress,
             onRelease: onRelease
         )
@@ -141,10 +152,12 @@ private struct PressReleaseCommandButtonBody: View {
     let configuration: ButtonStyle.Configuration
     let code: String
     let prominence: ControlItem.Prominence
+    let repeatsProgressHaptics: Bool
     let onPress: (String) -> Void
     let onRelease: () -> Void
 
     @State private var wasPressed = false
+    @State private var progressHapticsTask: Task<Void, Never>?
 
     var body: some View {
         configuration.label
@@ -154,12 +167,36 @@ private struct PressReleaseCommandButtonBody: View {
                 if isPressed && !wasPressed {
                     wasPressed = true
                     ChairHaptics.heavy()
+                    startProgressHapticsIfNeeded()
                     onPress(code)
                 } else if !isPressed && wasPressed {
                     wasPressed = false
+                    stopProgressHaptics()
                     onRelease()
                 }
             }
+            .onDisappear {
+                stopProgressHaptics()
+            }
+    }
+
+    private func startProgressHapticsIfNeeded() {
+        guard repeatsProgressHaptics else { return }
+        progressHapticsTask?.cancel()
+        progressHapticsTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    ChairHaptics.heavy()
+                }
+            }
+        }
+    }
+
+    private func stopProgressHaptics() {
+        progressHapticsTask?.cancel()
+        progressHapticsTask = nil
     }
 
     private var glassStyle: Glass {

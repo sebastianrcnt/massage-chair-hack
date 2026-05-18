@@ -33,6 +33,27 @@ struct ChairCommandEntry: Identifiable {
     let note: String?
 }
 
+enum ChairAirArea: String, CaseIterable, Identifiable {
+    case wrist = "팔목"
+    case shoulder = "어깨"
+    case foot = "발"
+    case calf = "종아리"
+
+    var id: Self { self }
+}
+
+enum ChairRollerPosition: Int, CaseIterable, Identifiable {
+    case bottom = 1
+    case lower
+    case lowerMiddle
+    case upperMiddle
+    case upper
+    case top
+
+    var id: Self { self }
+    var label: String { "\(rawValue)/6" }
+}
+
 struct DiscoveredDevice: Identifiable {
     let id: UUID
     let peripheral: CBPeripheral
@@ -85,6 +106,8 @@ final class ChairBLEManager: NSObject, ObservableObject {
     @Published var isManualMode: Bool = false
     /// Most-recently observed blinking manual technique (e.g. "롤링 두드림"), or nil when none active.
     @Published var manualTechnique: String?
+    @Published var activeAirAreas: [ChairAirArea] = []
+    @Published var rollerPosition: ChairRollerPosition?
 
     private static let autoModeCodes: [String: String] = [
         "031F": "충전",
@@ -110,6 +133,30 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private static let manualBlinkWindow: TimeInterval = 1.5
 
     private var manualBitLastZero: [String: Date] = [:]
+
+    /// B7 air-area bits default to 0 and blink high while selected. Multiple areas may blink together.
+    private static let airAreaBits: [(area: ChairAirArea, byteIndex: Int, mask: UInt8)] = [
+        (.wrist,    7, 1 << 1), // B7[b1]
+        (.shoulder, 7, 1 << 0), // B7[b0]
+        (.foot,     7, 1 << 6), // B7[b6]
+        (.calf,     7, 1 << 5), // B7[b5]
+    ]
+
+    /// Roller-position bits default to 1 and blink low as the roller passes the position.
+    private static let rollerPositionBits: [(position: ChairRollerPosition, byteIndex: Int, mask: UInt8)] = [
+        (.bottom,      0, 1 << 2), // B0[b2]
+        (.lower,       0, 1 << 1), // B0[b1]
+        (.lowerMiddle, 0, 1 << 0), // B0[b0]
+        (.upperMiddle, 8, 1 << 7), // B8[b7]
+        (.upper,       8, 1 << 6), // B8[b6]
+        (.top,         8, 1 << 5), // B8[b5]
+    ]
+
+    private static let airAreaBlinkWindow: TimeInterval = 1.3
+    private static let rollerPositionBlinkWindow: TimeInterval = 1.3
+
+    private var airAreaLastHigh: [ChairAirArea: Date] = [:]
+    private var rollerPositionLastLow: [ChairRollerPosition: Date] = [:]
 
     private let serviceUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abc")
     private let dataUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abd")
@@ -326,6 +373,10 @@ final class ChairBLEManager: NSObject, ObservableObject {
         manualTechnique = nil
         recentWidthSamples.removeAll()
         isWidthAutoCycling = false
+        airAreaLastHigh.removeAll()
+        activeAirAreas = []
+        rollerPositionLastLow.removeAll()
+        rollerPosition = nil
     }
 
     /// Inspects a long-status hex string and updates `isManualMode` /
@@ -380,6 +431,42 @@ final class ChairBLEManager: NSObject, ObservableObject {
 
         let distinct = Set(recentWidthSamples.map(\.value))
         isWidthAutoCycling = distinct.count >= 3
+    }
+
+    private func updateAirAreaState(from longHex: String) {
+        let bytes = ChairDecode.bytes(from: longHex)
+        let now = Date()
+
+        for entry in Self.airAreaBits {
+            guard bytes.indices.contains(entry.byteIndex),
+                  let value = UInt8(bytes[entry.byteIndex], radix: 16) else { continue }
+            if value & entry.mask != 0 {
+                airAreaLastHigh[entry.area] = now
+            }
+        }
+
+        let cutoff = now.addingTimeInterval(-Self.airAreaBlinkWindow)
+        airAreaLastHigh = airAreaLastHigh.filter { $0.value > cutoff }
+        activeAirAreas = ChairAirArea.allCases.filter { area in
+            airAreaLastHigh[area] != nil
+        }
+    }
+
+    private func updateRollerPositionState(from longHex: String) {
+        let bytes = ChairDecode.bytes(from: longHex)
+        let now = Date()
+
+        for entry in Self.rollerPositionBits {
+            guard bytes.indices.contains(entry.byteIndex),
+                  let value = UInt8(bytes[entry.byteIndex], radix: 16) else { continue }
+            if value & entry.mask == 0 {
+                rollerPositionLastLow[entry.position] = now
+            }
+        }
+
+        let cutoff = now.addingTimeInterval(-Self.rollerPositionBlinkWindow)
+        rollerPositionLastLow = rollerPositionLastLow.filter { $0.value > cutoff }
+        rollerPosition = rollerPositionLastLow.max { $0.value < $1.value }?.key
     }
 
     private func appendRaw(_ kind: ChairLogEntry.Kind, _ text: String) {
@@ -437,6 +524,8 @@ final class ChairBLEManager: NSObject, ObservableObject {
                 latestLong = payload
                 updateManualState(from: payload)
                 updateWidthAutoState(from: payload)
+                updateAirAreaState(from: payload)
+                updateRollerPositionState(from: payload)
             } else if payload.count > 5 {
                 latestShort = payload
             } else {

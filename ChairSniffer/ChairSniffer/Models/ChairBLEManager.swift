@@ -70,6 +70,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
 
     private enum DefaultsKey {
         static let autoReconnectEnabled = "ChairBLEManager.autoReconnectEnabled"
+        static let autoTimerExtendEnabled = "ChairBLEManager.autoTimerExtendEnabled"
         static let lastDeviceId = "ChairBLEManager.lastDeviceId"
         static let lastDeviceName = "ChairBLEManager.lastDeviceName"
     }
@@ -99,6 +100,11 @@ final class ChairBLEManager: NSObject, ObservableObject {
                 intentionalDisconnect = false
                 attemptAutoReconnect(reason: "Auto reconnect enabled")
             }
+        }
+    }
+    @Published var autoTimerExtendEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(autoTimerExtendEnabled, forKey: DefaultsKey.autoTimerExtendEnabled)
         }
     }
 
@@ -149,6 +155,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private var intentionalDisconnect = false
     private var autoReconnectTargetId: UUID?
     private var recentWidthSamples: [(value: String, date: Date)] = []
+    private var autoTimerExtendTimer: Timer?
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -162,8 +169,16 @@ final class ChairBLEManager: NSObject, ObservableObject {
         } else {
             autoReconnectEnabled = UserDefaults.standard.bool(forKey: DefaultsKey.autoReconnectEnabled)
         }
+        autoTimerExtendEnabled = UserDefaults.standard.bool(forKey: DefaultsKey.autoTimerExtendEnabled)
         super.init()
         central = CBCentralManager(delegate: self, queue: .main)
+        autoTimerExtendTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.pollAutoTimerExtend()
+        }
+    }
+
+    deinit {
+        autoTimerExtendTimer?.invalidate()
     }
 
     var isConnectionBusy: Bool {
@@ -268,6 +283,10 @@ final class ChairBLEManager: NSObject, ObservableObject {
         updateAutoMode(forCode: normalized)
     }
 
+    func toggleAutoTimerExtend() {
+        autoTimerExtendEnabled.toggle()
+    }
+
     private var rememberedDeviceId: UUID? {
         guard let raw = UserDefaults.standard.string(forKey: DefaultsKey.lastDeviceId) else { return nil }
         return UUID(uuidString: raw)
@@ -313,6 +332,30 @@ final class ChairBLEManager: NSObject, ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.attemptAutoReconnect(reason: reason)
         }
+    }
+
+    private func sendTimerClick() {
+        send(command: "032D")
+        send(command: "0355")
+    }
+
+    private func pollAutoTimerExtend() {
+        guard autoTimerExtendEnabled,
+              isConnected,
+              let remainingMinutes,
+              remainingMinutes <= 5 else { return }
+
+        appendSystem(.system, "Auto timer extend: remaining time <= 5 min, pressing timer twice")
+        sendTimerClick()
+        sendTimerClick()
+    }
+
+    private var remainingMinutes: Int? {
+        let timer = decodedStatus.timer
+        guard timer != "-",
+              let value = timer.split(separator: " ").first,
+              let minutes = Int(value) else { return nil }
+        return minutes
     }
 
     private func updateAutoMode(forCode code: String) {

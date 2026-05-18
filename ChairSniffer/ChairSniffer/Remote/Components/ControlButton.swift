@@ -13,6 +13,7 @@ struct ControlItem: Identifiable {
     let icon: String?
     let prominence: Prominence
     let emphasizesState: Bool
+    let iconOnly: Bool
     let releaseCode: String
     let repeatsProgressHaptics: Bool
 
@@ -23,6 +24,7 @@ struct ControlItem: Identifiable {
          icon: String? = nil,
          prominence: Prominence = .normal,
          emphasizesState: Bool = false,
+         iconOnly: Bool = false,
          releaseCode: String = "0355",
          repeatsProgressHaptics: Bool = false) {
         self.code = code
@@ -30,6 +32,7 @@ struct ControlItem: Identifiable {
         self.icon = icon
         self.prominence = prominence
         self.emphasizesState = emphasizesState
+        self.iconOnly = iconOnly
         self.releaseCode = releaseCode
         self.repeatsProgressHaptics = repeatsProgressHaptics
     }
@@ -77,6 +80,11 @@ struct ControlCommandButton: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                     .opacity(0.72)
+            }
+        } else if item.iconOnly {
+            if let icon = item.icon {
+                Image(systemName: icon)
+                    .font(.title.weight(.semibold))
             }
         } else {
             VStack(spacing: 4) {

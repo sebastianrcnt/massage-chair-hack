@@ -11,10 +11,6 @@ struct MassageTab: View {
     private let air        = ControlItem(code: "0375", label: "에어",     icon: "pillow.fill")
     private let airLevel   = ControlItem(code: "0315", label: "에어 세기", emphasizesState: true)
 
-    private let manual   = ControlItem(code: "0363", label: "수동", emphasizesState: true, releaseCode: "0339")
-    private let headUp   = ControlItem(code: "032C", label: "헤드 올리기", icon: "arrow.up", repeatsProgressHaptics: true)
-    private let headDown = ControlItem(code: "032F", label: "헤드 내리기", icon: "arrow.down", repeatsProgressHaptics: true)
-
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -23,7 +19,6 @@ struct MassageTab: View {
                     VStack(spacing: 24) {
                         intensitySection
                         airSection
-                        manualSection
                     }
                 }
             }
@@ -57,19 +52,6 @@ struct MassageTab: View {
                     button(airLevel, minHeight: 76)
                 }
                 AirAreaStatusRow(activeAreas: ble.activeAirAreas)
-            }
-        }
-    }
-
-    private var manualSection: some View {
-        ControlSection(title: "수동 조정", footnote: "헤드 위치는 수동을 한 번 이상 눌러 활성화한 뒤 동작합니다.") {
-            VStack(spacing: 12) {
-                button(manual, minHeight: 64)
-                RollerPositionStatusRow(position: ble.rollerPosition)
-                HStack(spacing: 12) {
-                    button(headUp, minHeight: 64)
-                    button(headDown, minHeight: 64)
-                }
             }
         }
     }
@@ -111,31 +93,5 @@ private struct AirAreaStatusRow: View {
 
     private func chipBackground(isActive: Bool) -> Color {
         isActive ? .chairActive : Color(.tertiarySystemFill)
-    }
-}
-
-private struct RollerPositionStatusRow: View {
-    let position: ChairRollerPosition?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text("롤러 위치")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(position?.label ?? "-")
-                .font(.system(size: 15, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.primary)
-                .frame(minWidth: 38, alignment: .leading)
-            HStack(spacing: 5) {
-                ForEach(ChairRollerPosition.allCases) { item in
-                    Circle()
-                        .fill(item == position ? Color.chairActive : Color(.tertiarySystemFill))
-                        .frame(width: 9, height: 9)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 4)
-        .frame(minHeight: 32)
     }
 }

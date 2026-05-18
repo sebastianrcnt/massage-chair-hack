@@ -71,7 +71,8 @@ the last byte so it can tolerate length changes.
 
 | Range | Name | Values / rule | Confidence |
 | --- | --- | --- | --- |
-| `B0[b7:b0]` | Unknown flags | Varies across samples | Unknown |
+| `B0[b7:b3]` | Unknown flags | Varies across samples | Unknown |
+| `B0[b2:b0]` | Roller position blink: lower 3 positions | Default `1`; bit blinks `0`/`1` about every 0.5 s as the roller passes that position. `B0[b2]` is the lowest mapped position | Tentative |
 | `B1[b7:b0]` | Timer tens 7-segment byte | Direct lookup in the 7-segment table | Confirmed |
 | `B2[b7:b4]` | Timer ones segment low nibble | Becomes `ones_segment[b3:b0]` | Confirmed |
 | `B2[b3:b0]` | Unknown flags | Varies across samples | Unknown |
@@ -94,9 +95,52 @@ the last byte so it can tolerate length changes.
 | `B6[b3]` | Back recline movement | Blinks `0`/`1` about once per second while the back is reclining | Tentative |
 | `B6[b2]` | Back raise movement | Blinks `0`/`1` about once per second while the back is raising | Tentative |
 | `B6[b1:b0]` | Massage width | `00` -> wide, `01` -> medium, `10` -> narrow, `11` reserved | Tentative |
-| `B7[b7:b0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
+| `B7[b7]` | Unknown flag | Usually observed as `1` in current samples | Unknown |
+| `B7[b6]` | Air area: 발 blink | Default `0`; blinks `1` about every 0.5 s when active. Multiple B7 air-area bits may blink at the same time | Tentative |
+| `B7[b5]` | Air area: 종아리 blink | Default `0`; blinks `1` about every 0.5 s when active. Multiple B7 air-area bits may blink at the same time | Tentative |
+| `B7[b4:b2]` | Unknown flags | Not mapped | Unknown |
+| `B7[b1]` | Air area: 팔목 blink | Default `0`; blinks `1` about every 0.5 s when active. Multiple B7 air-area bits may blink at the same time | Tentative |
+| `B7[b0]` | Air area: 어깨 blink | Default `0`; blinks `1` about every 0.5 s when active. Multiple B7 air-area bits may blink at the same time | Tentative |
+| `B8[b7:b5]` | Roller position blink: upper 3 positions | Default `1`; bit blinks `0`/`1` about every 0.5 s as the roller passes that position. `B8[b5]` is the highest mapped position | Tentative |
+| `B8[b4:b2], B8[b0]` | Unknown flags | Not mapped | Unknown |
 | `last[b1]` | Heater | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |
-| `last[b7:b2], last[b0]` | Unknown flags | Not mapped | Unknown |
+
+### Blink Indicators
+
+Several status fields are blink indicators rather than stable state bits. UI should
+debounce them by treating any bit observed in its active blink phase within a recent
+window as active/current.
+
+#### Roller Position
+
+Roller position is spread across `B0[b2:b0]` and `B8[b7:b5]`. The bits are normally
+`1`; when the roller passes a position, that bit blinks `0`/`1` about every 0.5 s.
+Unlike B7 air-area bits, the roller position should generally be interpreted as a
+single current/passing position.
+
+Position order from lowest to highest:
+
+| Order | Bit |
+| --- | --- |
+| Lowest | `B0[b2]` |
+| 2 | `B0[b1]` |
+| 3 | `B0[b0]` |
+| 4 | `B8[b7]` |
+| 5 | `B8[b6]` |
+| Highest | `B8[b5]` |
+
+#### Air Areas
+
+`B7` contains air-area blink indicators. These bits are normally `0`; when an area
+is active, the corresponding bit blinks high about every 0.5 s. Multiple air-area
+bits can blink at the same time.
+
+| Area | Bit |
+| --- | --- |
+| 팔목 | `B7[b1]` |
+| 어깨 | `B7[b0]` |
+| 발 | `B7[b6]` |
+| 종아리 | `B7[b5]` |
 
 ### Manual Mode
 

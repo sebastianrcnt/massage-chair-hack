@@ -12,7 +12,7 @@ struct ConnectionBanner: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
                 Spacer()
-                if ble.isScanning {
+                if ble.isConnectionBusy {
                     ProgressView()
                         .controlSize(.small)
                 } else {
@@ -39,8 +39,11 @@ struct ConnectionBanner: View {
         if !ble.isBluetoothReady {
             return ble.bluetoothStatusMessage
         }
+        if ble.activeDeviceId != nil && !ble.isConnected {
+            return "Connecting to chair..."
+        }
         if ble.isScanning {
-            return "Scanning for chair…"
+            return "Scanning for chair..."
         }
         return "Disconnected — Tap to scan"
     }

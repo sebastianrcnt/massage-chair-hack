@@ -85,7 +85,7 @@ struct ControlCommandButton: View {
 
     private var foreground: Color {
         switch effectiveProminence {
-        case .primary, .active: return .white
+        case .primary, .active: return .chairControlTextOnTint
         case .normal:           return .primary
         }
     }

@@ -32,7 +32,7 @@ struct DevicePickerSheet: View {
                 }
             }
             .onAppear {
-                if !ble.isConnected && !ble.isScanning {
+                if !ble.isConnected && !ble.isConnectionBusy {
                     ble.scan()
                 }
                 ble.refreshDeviceList()

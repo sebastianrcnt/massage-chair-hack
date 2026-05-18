@@ -47,6 +47,12 @@ final class ChairBLEManager: NSObject, ObservableObject {
         static let system = 80
     }
 
+    private enum DefaultsKey {
+        static let autoReconnectEnabled = "ChairBLEManager.autoReconnectEnabled"
+        static let lastDeviceId = "ChairBLEManager.lastDeviceId"
+        static let lastDeviceName = "ChairBLEManager.lastDeviceName"
+    }
+
     @Published var connectionState = "Starting Bluetooth"
     @Published var isConnected = false
     @Published var isScanning = false
@@ -64,10 +70,19 @@ final class ChairBLEManager: NSObject, ObservableObject {
     /// The peripheral currently being connected to (spinner state) or already connected (idle/active).
     /// Cleared on failure, intentional disconnect, or unintentional drop.
     @Published var activeDeviceId: UUID?
+    @Published var autoReconnectEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(autoReconnectEnabled, forKey: DefaultsKey.autoReconnectEnabled)
+            if autoReconnectEnabled {
+                intentionalDisconnect = false
+                attemptAutoReconnect(reason: "Auto reconnect enabled")
+            }
+        }
+    }
 
     /// `true` while the chair's long status reports manual mode (B4[b5:b4] == 00).
     @Published var isManualMode: Bool = false
-    /// Most-recently observed blinking manual technique (e.g. "주무름"), or nil when none active.
+    /// Most-recently observed blinking manual technique (e.g. "롤링 두드림"), or nil when none active.
     @Published var manualTechnique: String?
 
     private static let autoModeCodes: [String: String] = [
@@ -82,10 +97,10 @@ final class ChairBLEManager: NSObject, ObservableObject {
     /// (name, byte index, bit mask). Each bit defaults to 1 and blinks 0/1 while its technique is active.
     private static let manualTechniqueBits: [(name: String, byteIndex: Int, mask: UInt8)] = [
         ("주무름",      3, 1 << 6),  // B3[b6]
-        ("지압",        3, 1 << 7),  // B3[b7]
-        ("두드림",      4, 1 << 1),  // B4[b1]
-        ("손날 두드림",  4, 1 << 2),  // B4[b2]
-        ("시아추",      4, 1 << 0),  // B4[b0]
+        ("롤링",        3, 1 << 7),  // B3[b7]
+        ("주무름 두드림", 4, 1 << 1),  // B4[b1]
+        ("롤링 두드림",  4, 1 << 2),  // B4[b2]
+        ("느린 두드림",  4, 1 << 0),  // B4[b0]
         ("복합",        4, 1 << 3),  // B4[b3]
     ]
 
@@ -106,6 +121,8 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private var commandCharacteristic: CBCharacteristic?
     private var hasReceivedFirstNotification = false
     private var connectedDeviceName: String?
+    private var intentionalDisconnect = false
+    private var autoReconnectTargetId: UUID?
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -114,8 +131,17 @@ final class ChairBLEManager: NSObject, ObservableObject {
     }()
 
     override init() {
+        if UserDefaults.standard.object(forKey: DefaultsKey.autoReconnectEnabled) == nil {
+            autoReconnectEnabled = true
+        } else {
+            autoReconnectEnabled = UserDefaults.standard.bool(forKey: DefaultsKey.autoReconnectEnabled)
+        }
         super.init()
         central = CBCentralManager(delegate: self, queue: .main)
+    }
+
+    var isConnectionBusy: Bool {
+        isScanning || (activeDeviceId != nil && !isConnected)
     }
 
     var decodedStatus: ChairDecodedStatus {
@@ -158,6 +184,8 @@ final class ChairBLEManager: NSObject, ObservableObject {
     }
 
     func disconnect() {
+        intentionalDisconnect = true
+        autoReconnectTargetId = nil
         if let peripheral {
             central.cancelPeripheralConnection(peripheral)
         }
@@ -170,10 +198,13 @@ final class ChairBLEManager: NSObject, ObservableObject {
     }
 
     func connect(_ device: DiscoveredDevice) {
+        intentionalDisconnect = false
+        autoReconnectTargetId = nil
         central.stopScan()
         isScanning = false
         peripheral = device.peripheral
         connectedDeviceName = device.name
+        remember(device)
         device.peripheral.delegate = self
         connectionState = "Connecting to \(device.name)"
         appendSystem(.system, "Connecting to \(device.name) (\(device.rssi) dBm)")
@@ -205,6 +236,53 @@ final class ChairBLEManager: NSObject, ObservableObject {
         peripheral.writeValue(Data("SEND \(normalized)".utf8), for: commandCharacteristic, type: .withResponse)
         sentCount += 1
         updateAutoMode(forCode: normalized)
+    }
+
+    private var rememberedDeviceId: UUID? {
+        guard let raw = UserDefaults.standard.string(forKey: DefaultsKey.lastDeviceId) else { return nil }
+        return UUID(uuidString: raw)
+    }
+
+    private var rememberedDeviceName: String? {
+        UserDefaults.standard.string(forKey: DefaultsKey.lastDeviceName)
+    }
+
+    private func remember(_ device: DiscoveredDevice) {
+        UserDefaults.standard.set(device.id.uuidString, forKey: DefaultsKey.lastDeviceId)
+        UserDefaults.standard.set(device.name, forKey: DefaultsKey.lastDeviceName)
+    }
+
+    private func attemptAutoReconnect(reason: String) {
+        guard autoReconnectEnabled,
+              !intentionalDisconnect,
+              central?.state == .poweredOn,
+              !isConnected,
+              !isConnectionBusy,
+              let id = rememberedDeviceId else { return }
+
+        let known = central.retrievePeripherals(withIdentifiers: [id])
+        if let device = known.first {
+            let name = rememberedDeviceName ?? device.name ?? "chair"
+            peripheral = device
+            connectedDeviceName = name
+            device.delegate = self
+            activeDeviceId = id
+            connectionState = "Reconnecting to \(name)"
+            appendSystem(.system, "\(reason): reconnecting to \(name)")
+            central.connect(device)
+        } else {
+            autoReconnectTargetId = id
+            isScanning = true
+            connectionState = "Scanning for remembered chair..."
+            appendSystem(.system, "\(reason): scanning for remembered chair")
+            central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
+        }
+    }
+
+    private func scheduleAutoReconnect(reason: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.attemptAutoReconnect(reason: reason)
+        }
     }
 
     private func updateAutoMode(forCode code: String) {
@@ -384,6 +462,12 @@ extension ChairBLEManager: CBCentralManagerDelegate {
         if central.state != .unknown {
             appendSystem(.system, text)
         }
+        if central.state == .poweredOn {
+            attemptAutoReconnect(reason: "Bluetooth ready")
+        } else {
+            autoReconnectTargetId = nil
+            isScanning = false
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
@@ -401,6 +485,10 @@ extension ChairBLEManager: CBCentralManagerDelegate {
                 displayedDevices.append(device)
             }
         }
+
+        if autoReconnectTargetId == device.id, !isConnected, activeDeviceId == nil {
+            connect(device)
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
@@ -416,6 +504,7 @@ extension ChairBLEManager: CBCentralManagerDelegate {
         activeDeviceId = nil
         connectionState = "Connect failed"
         appendSystem(.error, "Couldn't connect: \(error?.localizedDescription ?? "unknown error")")
+        scheduleAutoReconnect(reason: "Connect failed")
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
@@ -429,6 +518,7 @@ extension ChairBLEManager: CBCentralManagerDelegate {
             appendSystem(.system, "Disconnected")
         }
         resetSession()
+        scheduleAutoReconnect(reason: "Connection dropped")
     }
 }
 

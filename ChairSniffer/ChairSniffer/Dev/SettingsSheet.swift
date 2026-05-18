@@ -65,13 +65,20 @@ struct SettingsSheet: View {
                     .foregroundStyle(.primary)
                 Spacer()
                 HStack(spacing: 6) {
-                    Circle()
-                        .fill(statusColor)
-                        .frame(width: 8, height: 8)
+                    if ble.isConnectionBusy {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 8, height: 8)
+                    }
                     Text(statusLabel)
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Toggle("Auto Reconnect", isOn: $ble.autoReconnectEnabled)
 
             HStack {
                 Text("Messages")
@@ -178,7 +185,7 @@ struct SettingsSheet: View {
     private var statusColor: Color {
         if !ble.isBluetoothReady { return .red }
         if ble.isConnected { return .green }
-        if ble.activeDeviceId != nil || ble.isScanning { return .orange }
+        if ble.activeDeviceId != nil || ble.isScanning { return .chairTint }
         return .secondary
     }
 }

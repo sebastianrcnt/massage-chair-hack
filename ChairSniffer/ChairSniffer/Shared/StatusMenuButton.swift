@@ -9,11 +9,19 @@ struct StatusMenuButton: View {
 
     var body: some View {
         Button(action: onTap) {
-            Image(systemName: iconName)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(iconColor)
-                .frame(width: 32, height: 32)
-                .accessibilityLabel(accessibilityLabel)
+            Group {
+                if ble.isConnectionBusy {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.chairTint)
+                } else {
+                    Image(systemName: iconName)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(iconColor)
+                }
+            }
+            .frame(width: 32, height: 32)
+            .accessibilityLabel(accessibilityLabel)
         }
         .buttonStyle(.glass)
     }
@@ -27,11 +35,12 @@ struct StatusMenuButton: View {
     private var iconColor: Color {
         if !ble.isBluetoothReady { return .red }
         if ble.isConnected       { return .green }
-        return .orange
+        return .secondary
     }
 
     private var accessibilityLabel: String {
         if !ble.isBluetoothReady { return "Bluetooth unavailable. Open developer tools." }
+        if ble.isConnectionBusy  { return "Connecting. Open developer tools." }
         if ble.isConnected       { return "Connected. Open developer tools." }
         return "Disconnected. Open developer tools."
     }

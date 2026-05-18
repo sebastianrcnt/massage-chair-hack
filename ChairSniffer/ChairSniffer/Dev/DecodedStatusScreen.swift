@@ -43,8 +43,8 @@ struct StatusContent: View {
         0xFF, // B1 timer tens
         0xF0, // B2 timer ones (high nibble)
         0x0F, // B3 timer ones (low nibble)
-        0x70, // B4 air b4 + air strength b6:b5
-        0x0C, // B5 speed b3:b2
+        0xF0, // B4 b7 지압 + b6:b5 air strength / 주무름 + b4 air
+        0x3F, // B5 b5:b4 manual indicator + b3:b0 manual technique blinks / speed
         0xFF, // B6 foot roller, leg/back motion, width
         0x00, // B7 unknown
         0x02, // B8 (last) heater b1

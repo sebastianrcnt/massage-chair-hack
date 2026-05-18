@@ -77,14 +77,15 @@ the last byte so it can tolerate length changes.
 | `B2[b3:b0]` | Unknown flags | Varies across samples | Unknown |
 | `B3[b7:b4]` | Unknown flags | Varies across samples | Unknown |
 | `B3[b3:b0]` | Timer ones segment high nibble | Becomes `ones_segment[b7:b4]` | Confirmed |
-| `B4[b7]` | Unknown flags | Not mapped | Unknown |
-| `B4[b6:b5]` | Air strength | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
+| `B4[b7]` | Manual: 지압 blink (when manual) | Default `1`; blinks `0`/`1` when 지압 is the active manual technique | Tentative |
+| `B4[b6:b5]` | Air strength | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative — overlaps with `B4[b6]` 주무름 blink in manual mode |
 | `B4[b4]` | Air | `1` -> on, `0` -> off | Tentative |
 | `B4[b3:b0]` | Unknown flags | Not mapped | Unknown |
 | `B5[b7:b6]` | Unknown flags | Not mapped | Unknown |
-| `B5[b5:b4]` | Unknown flags | Not mapped | Unknown |
-| `B5[b3:b2]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative |
-| `B5[b1:b0]` | Unknown flags | Not mapped | Unknown |
+| `B5[b5:b4]` | Manual mode indicator | `00` -> chair is in manual mode | Tentative |
+| `B5[b3:b2]` | Massage speed | `00` -> level 1, `01` -> level 3, `11` -> level 5, `10` reserved | Tentative — overlaps with manual blink bits in manual mode |
+| `B5[b1]` | Manual: 두드림 blink (when manual) | Default `1`; blinks `0`/`1` when 두드림 is active | Tentative |
+| `B5[b0]` | Manual: 시아추 blink (when manual) | Default `1`; blinks `0`/`1` when 시아추 is active | Tentative |
 | `B6[b7]` | Foot roller | `1` -> on, `0` -> off | Tentative |
 | `B6[b6]` | Leg raise movement | Blinks `0`/`1` about once per second while the leg rest is raising | Tentative |
 | `B6[b5]` | Leg recline movement | Blinks `0`/`1` about once per second while the leg rest is reclining | Tentative |
@@ -95,6 +96,31 @@ the last byte so it can tolerate length changes.
 | `B7[b7:b0]` | Unknown flags | Usually observed as `80` in current samples | Unknown |
 | `last[b1]` | Heater | `on` when `(last_byte & 0x02) != 0`; otherwise `off` | Tentative |
 | `last[b7:b2], last[b0]` | Unknown flags | Not mapped | Unknown |
+
+### Manual Mode
+
+When `B5[b5:b4] == 00` the chair is in manual mode. Six bits across B4 and B5
+each correspond to one manual massage technique. Each bit defaults to `1`; while
+the matching technique is the active one, the bit blinks `0`/`1` (~1 Hz, same
+behavior as the back/leg motion bits).
+
+| Slot | Technique (Korean) | English | Blink bit |
+| --- | --- | --- | --- |
+| 1 | 주무름 | Knead | `B4[b6]` |
+| 2 | 두드림 | Tap | `B5[b1]` |
+| 3 | 지압 | Acupressure | `B4[b7]` |
+| 4 | 손날 두드림 | Edge tap / Chop | `B5[b2]` |
+| 5 | 시아추 | Shiatsu | `B5[b0]` |
+| 6 | 복합 | Combination | `B5[b3]` |
+
+Overlaps to validate:
+
+- `B4[b6:b5]` was tentatively mapped to Air strength. `B4[b6]` is also the
+  Knead blink bit in manual mode. The two may be mode-dependent; needs
+  cross-mode capture.
+- `B5[b3:b2]` was tentatively mapped to Massage speed. `B5[b3]` is the
+  Combination blink and `B5[b2]` is the Edge-tap blink in manual mode. Same
+  caveat.
 
 ### Packed Timer Detail
 

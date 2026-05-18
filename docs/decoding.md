@@ -83,7 +83,8 @@ the last byte so it can tolerate length changes.
 | `B3[b3:b0]` | Timer ones segment high nibble | Becomes `ones_segment[b7:b4]` | Confirmed |
 | `B4[b7]` | Unknown flag | Not mapped | Unknown |
 | `B4[b6:b5]` | Air strength | `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative |
-| `B4[b5:b4]` | Manual mode indicator | `00` -> manual mode, `11` -> auto mode; overlaps the air-strength low bit and should be confirmed with manual technique blink evidence | Tentative — mode-dependent |
+| `B4[b5]` | Air strength low bit | With `B4[b6]`: `00` -> lv 1, `01` -> lv 3, `11` -> lv 5, `10` reserved | Tentative |
+| `B4[b4]` | Manual mode indicator | `0` -> manual mode, `1` -> auto / non-manual mode | Tentative |
 | `B4[b3]` | Manual: 복합 blink | Default `1`; blinks `0`/`1` when 복합 active | Tentative |
 | `B4[b2]` | Manual: 롤링 두드림 blink | Default `1`; blinks `0`/`1` when 롤링 두드림 active | Tentative |
 | `B4[b1]` | Manual: 주무름 두드림 blink | Default `1`; blinks `0`/`1` when 주무름 두드림 active | Tentative |
@@ -147,7 +148,7 @@ bits can blink at the same time.
 
 ### Manual Mode
 
-`B4[b5:b4]` indicates the broad mode: `00` is manual mode and `11` is auto mode.
+`B4[b4]` indicates the broad mode: `0` is manual mode and `1` is auto / non-manual mode.
 Six bits across `B3[b7:b6]` and `B4[b3:b0]`
 each correspond to one manual massage technique. Each bit defaults to `1`; while
 the matching technique is the active one, the bit blinks `0`/`1` (~1 Hz, same
@@ -167,9 +168,8 @@ observed-motion names instead.
 
 Overlaps to validate:
 
-- `B4[b6:b5]` maps to Air strength. `B4[b5]` also participates in the
-  `B4[b5:b4]` manual-mode indicator, so the app should confirm manual mode with
-  manual technique blink evidence rather than the indicator alone.
+- No known long-status bit currently has two intentional meanings. Re-check this
+  section when adding or changing bit mappings.
 
 ### Packed Timer Detail
 

@@ -102,7 +102,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
         }
     }
 
-    /// `true` while the chair's long status reports manual mode (B4[b5:b4] == 00).
+    /// `true` while the chair's long status reports manual mode (B4[b4] == 0).
     @Published var isManualMode: Bool = false
     /// Most-recently observed blinking manual technique (e.g. "롤링 두드림"), or nil when none active.
     @Published var manualTechnique: String?
@@ -384,7 +384,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     }
 
     /// Inspects a long-status hex string and updates `isManualMode` /
-    /// `manualTechnique` based on the manual-mode indicator (B4[b5:b4] == 00)
+    /// `manualTechnique` based on the manual-mode indicator (B4[b4] == 0)
     /// and which technique-blink bit (B3[b7], B3[b6], B4[b0..b3]) most recently
     /// blinked within the blink window.
     private func updateManualState(from longHex: String) {
@@ -392,7 +392,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
         guard bytes.count >= 5,
               let b4 = UInt8(bytes[4], radix: 16) else { return }
 
-        let inManual = ((b4 >> 4) & 0b11) == 0
+        let inManual = (b4 & 0x10) == 0
 
         if !inManual {
             if isManualMode || manualTechnique != nil || !manualBitLastZero.isEmpty || !manualBitLastOne.isEmpty {

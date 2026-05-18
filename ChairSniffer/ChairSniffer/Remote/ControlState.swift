@@ -31,6 +31,9 @@ enum LiveStateLookup {
             }
             return widthState(decoded.width)
         default:
+            if let autoModeName = ChairSpec.autoModeCodes[code.uppercased()] {
+                return ControlState(isOn: !ble.isManualMode && ble.currentAutoMode == autoModeName, label: nil)
+            }
             return nil
         }
     }

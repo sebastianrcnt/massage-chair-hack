@@ -47,10 +47,10 @@ struct RemoteCommandPad: View {
     private let heater = ControlItem(code: "0330", label: "온열",     icon: "heat.waves")
     private let manual = ControlItem(code: "0363", label: "수동",     icon: "slider.horizontal.3")
 
-    private let backRaise   = ControlItem(code: "0302", label: "등받이 ↑", icon: "chevron.up")
-    private let backRecline = ControlItem(code: "0304", label: "등받이 ↓", icon: "chevron.down")
-    private let legRaise    = ControlItem(code: "0307", label: "다리 ↑",  icon: "chevron.up")
-    private let legLower    = ControlItem(code: "0301", label: "다리 ↓",  icon: "chevron.down")
+    private let backRaise   = ControlItem(code: "0302", label: "올리기", icon: "chevron.up")
+    private let backRecline = ControlItem(code: "0304", label: "내리기", icon: "chevron.down")
+    private let legRaise    = ControlItem(code: "0307", label: "올리기", icon: "chevron.up")
+    private let legLower    = ControlItem(code: "0301", label: "내리기", icon: "chevron.down")
 
     private let zeroG = ControlItem(code: "0306", label: "무중력", icon: "figure.flexibility",   prominence: .primary)
     private let reset = ControlItem(code: "0384", label: "원위치", icon: "arrow.counterclockwise", prominence: .primary)
@@ -74,29 +74,25 @@ struct RemoteCommandPad: View {
     ]
 
     var body: some View {
-        VStack(spacing: 14) {
-            // Primary controls
-            HStack(spacing: 10) {
-                ControlCommandButton(item: power, state: liveState(power.code), minHeight: 58, onPress: onPress, onRelease: onRelease)
-                ControlCommandButton(item: pause, state: liveState(pause.code), minHeight: 58, onPress: onPress, onRelease: onRelease)
+        VStack(spacing: 20) {
+            // Primary buttons (no header)
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    ControlCommandButton(item: power, state: liveState(power.code), minHeight: 58, onPress: onPress, onRelease: onRelease)
+                    ControlCommandButton(item: pause, state: liveState(pause.code), minHeight: 58, onPress: onPress, onRelease: onRelease)
+                }
+                HStack(spacing: 10) {
+                    compactButton(timer)
+                    compactButton(heater)
+                    compactButton(manual)
+                }
             }
 
-            HStack(spacing: 10) {
-                compactButton(timer)
-                compactButton(heater)
-                compactButton(manual)
-            }
-
-            remoteDivider
-
-            // Posture (back + leg)
             HStack(alignment: .top, spacing: 10) {
                 verticalPair(title: "등받이", top: backRaise, bottom: backRecline)
                 verticalPair(title: "다리",  top: legRaise,  bottom: legLower)
             }
-            .frame(maxWidth: .infinity)
 
-            // Posture presets (Zero G + Reset)
             section(title: "자세 프리셋") {
                 HStack(spacing: 10) {
                     wideButton(zeroG)
@@ -104,23 +100,20 @@ struct RemoteCommandPad: View {
                 }
             }
 
-            remoteDivider
-
-            // Massage tuning
-            HStack(spacing: 10) {
-                compactButton(speed)
-                compactButton(width)
-                compactButton(footRoller)
+            section(title: "마사지") {
+                VStack(spacing: 10) {
+                    HStack(spacing: 10) {
+                        compactButton(speed)
+                        compactButton(width)
+                        compactButton(footRoller)
+                    }
+                    HStack(spacing: 10) {
+                        wideButton(air)
+                        wideButton(airLevel)
+                    }
+                }
             }
 
-            HStack(spacing: 10) {
-                wideButton(air)
-                wideButton(airLevel)
-            }
-
-            remoteDivider
-
-            // Massage head (manual-only)
             section(title: "마사지 헤드 · 수동 전용") {
                 HStack(spacing: 10) {
                     wideButton(headUp)
@@ -128,9 +121,6 @@ struct RemoteCommandPad: View {
                 }
             }
 
-            remoteDivider
-
-            // Auto modes
             section(title: "오토 모드") {
                 LazyVGrid(
                     columns: [
@@ -145,32 +135,7 @@ struct RemoteCommandPad: View {
                 }
             }
         }
-        .padding(14)
         .frame(width: padWidth)
-        .background(remoteBodyBackground)
-    }
-
-    private var remoteBodyBackground: some View {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [Color(.systemGray6), Color(.systemGray5)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-            }
-            .shadow(color: .black.opacity(0.12), radius: 14, x: 0, y: 6)
-    }
-
-    private var remoteDivider: some View {
-        Capsule()
-            .fill(Color.primary.opacity(0.09))
-            .frame(height: 1)
-            .padding(.horizontal, 8)
     }
 
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {

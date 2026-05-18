@@ -6,14 +6,22 @@ struct MassageTab: View {
     private let speed      = ControlItem(code: "0327", label: "속도",   icon: "speedometer")
     private let width      = ControlItem(code: "0364", label: "폭",     icon: "arrow.left.and.right")
     private let footRoller = ControlItem(code: "0331", label: "발롤러", icon: "circle.dotted")
-    private let air        = ControlItem(code: "0375", label: "에어백",   icon: "bubble.left.and.bubble.right.fill")
+    private let heater     = ControlItem(code: "0330", label: "온열",   icon: "heat.waves")
+    private let air        = ControlItem(code: "0375", label: "에어",     icon: "pillow.fill")
     private let airLevel   = ControlItem(code: "0315", label: "에어 세기", icon: "gauge.medium")
+
+    private let manual   = ControlItem(code: "0363", label: "수동", icon: "slider.horizontal.3")
+    private let headUp   = ControlItem(code: "032C", label: "헤드 올리기", icon: "arrow.up")
+    private let headDown = ControlItem(code: "032F", label: "헤드 내리기", icon: "arrow.down")
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                intensitySection
-                airSection
+            GlassEffectContainer(spacing: 12) {
+                VStack(spacing: 24) {
+                    intensitySection
+                    airSection
+                    manualSection
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
@@ -28,7 +36,10 @@ struct MassageTab: View {
                     button(speed, minHeight: 76)
                     button(width, minHeight: 76)
                 }
-                button(footRoller, minHeight: 64)
+                HStack(spacing: 12) {
+                    button(footRoller, minHeight: 64)
+                    button(heater, minHeight: 64)
+                }
             }
         }
     }
@@ -38,6 +49,18 @@ struct MassageTab: View {
             HStack(spacing: 12) {
                 button(air, minHeight: 76)
                 button(airLevel, minHeight: 76)
+            }
+        }
+    }
+
+    private var manualSection: some View {
+        ControlSection(title: "수동 조정", footnote: "헤드 위치는 수동을 한 번 이상 눌러 활성화한 뒤 동작합니다.") {
+            VStack(spacing: 12) {
+                button(manual, minHeight: 64)
+                HStack(spacing: 12) {
+                    button(headUp, minHeight: 64)
+                    button(headDown, minHeight: 64)
+                }
             }
         }
     }

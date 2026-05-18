@@ -3,10 +3,9 @@ import SwiftUI
 struct HomeTab: View {
     @ObservedObject var ble: ChairBLEManager
 
-    private let power  = ControlItem(code: "0303", label: "전원",     icon: "power",     prominence: .primary)
-    private let pause  = ControlItem(code: "0322", label: "일시정지", icon: "playpause", prominence: .primary)
-    private let timer  = ControlItem(code: "032D", label: "타이머",   icon: "timer")
-    private let heater = ControlItem(code: "0330", label: "온열",     icon: "heat.waves")
+    private let power = ControlItem(code: "0303", label: "전원",     icon: "power",     prominence: .primary)
+    private let pause = ControlItem(code: "0322", label: "일시정지", icon: "playpause", prominence: .primary)
+    private let timer = ControlItem(code: "032D", label: "타이머",   icon: "timer")
 
     private let autoModes: [ControlItem] = [
         ControlItem(code: "031F", label: "충전",     icon: "battery.100"),
@@ -19,10 +18,12 @@ struct HomeTab: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                primaryRow
-                sessionRow
-                autoModeSection
+            GlassEffectContainer(spacing: 12) {
+                VStack(spacing: 24) {
+                    primaryRow
+                    timerRow
+                    autoModeSection
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
@@ -37,11 +38,8 @@ struct HomeTab: View {
         }
     }
 
-    private var sessionRow: some View {
-        HStack(spacing: 12) {
-            button(timer, minHeight: 76)
-            button(heater, minHeight: 76)
-        }
+    private var timerRow: some View {
+        button(timer, minHeight: 76)
     }
 
     private var autoModeSection: some View {

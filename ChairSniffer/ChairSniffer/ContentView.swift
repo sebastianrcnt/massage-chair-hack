@@ -7,17 +7,18 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            tab(title: "Chair", icon: "house.fill", label: "홈") {
-                HomeTab(ble: ble)
+            Tab("홈", systemImage: "house.fill") {
+                tabContent(title: "홈") { HomeTab(ble: ble) }
             }
-            tab(title: "자세", icon: "figure.seated.side", label: "자세") {
-                PostureTab(ble: ble)
+            Tab("자세", systemImage: "figure.seated.side") {
+                tabContent(title: "자세") { PostureTab(ble: ble) }
             }
-            tab(title: "마사지", icon: "hand.raised.fill", label: "마사지") {
-                MassageTab(ble: ble)
+            Tab("마사지", systemImage: "hand.raised.fill") {
+                tabContent(title: "마사지") { MassageTab(ble: ble) }
             }
         }
         .tint(.chairTint)
+        .tabBarMinimizeBehavior(.onScrollDown)
         .sheet(isPresented: $showDevicePicker) {
             DevicePickerSheet(ble: ble, isPresented: $showDevicePicker)
         }
@@ -27,10 +28,8 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func tab<Content: View>(
+    private func tabContent<Content: View>(
         title: String,
-        icon: String,
-        label: String,
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
@@ -52,7 +51,6 @@ struct ContentView: View {
                     }
                 }
         }
-        .tabItem { Label(label, systemImage: icon) }
     }
 }
 

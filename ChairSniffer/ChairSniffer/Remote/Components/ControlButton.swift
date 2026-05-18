@@ -119,18 +119,7 @@ private struct PressReleaseCommandButtonBody: View {
 
     var body: some View {
         configuration.label
-            .background(buttonBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.primary.opacity(strokeOpacity), lineWidth: 0.5)
-            }
-            .shadow(
-                color: .black.opacity(configuration.isPressed ? 0.04 : 0.06),
-                radius: configuration.isPressed ? 1 : 5,
-                x: 0,
-                y: configuration.isPressed ? 1 : 2
-            )
-            .offset(y: configuration.isPressed ? 1 : 0)
+            .glassEffect(glassStyle, in: .rect(cornerRadius: 18))
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .onChange(of: configuration.isPressed) { _, isPressed in
                 if isPressed && !wasPressed {
@@ -143,21 +132,14 @@ private struct PressReleaseCommandButtonBody: View {
             }
     }
 
-    private var strokeOpacity: Double {
-        switch prominence {
-        case .primary, .active: return 0.0
-        case .normal:           return configuration.isPressed ? 0.02 : 0.06
-        }
-    }
-
-    private var buttonBackground: Color {
+    private var glassStyle: Glass {
         switch prominence {
         case .primary:
-            return configuration.isPressed ? Color.chairTint.opacity(0.85) : Color.chairTint
+            return .regular.tint(.chairTint).interactive()
         case .active:
-            return configuration.isPressed ? Color.chairActive.opacity(0.85) : Color.chairActive
+            return .regular.tint(.chairActive).interactive()
         case .normal:
-            return configuration.isPressed ? Color(.tertiarySystemBackground) : Color(.secondarySystemGroupedBackground)
+            return .regular.interactive()
         }
     }
 }

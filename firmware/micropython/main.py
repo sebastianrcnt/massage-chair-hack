@@ -17,9 +17,11 @@ BLE pairing/passkey security is intentionally not implemented yet.
 """
 
 from micropython import const
-from machine import Pin, UART, reset
+from machine import Pin, UART, WDT, reset, reset_cause
 import binascii
 import bluetooth
+import gc
+import micropython
 import os
 import time
 
@@ -63,6 +65,13 @@ _FLAG_NOTIFY = const(0x0010)
 # Long enough for the largest [ERR ...] string and a full MAX_FRAME_LEN frame.
 GATT_BUFFER_LEN = const(128)
 BLE_MTU = const(256)
+BLE_RX_BUFFER_LEN = const(512)
+BLE_ADVERTISE_INTERVAL_US = const(100_000)
+BLE_ADVERTISE_RETRY_MS = const(10_000)
+GC_INTERVAL_MS = const(60_000)
+WDT_TIMEOUT_MS = const(30_000)
+
+micropython.alloc_emergency_exception_buf(100)
 
 
 class ChairBleBridge:
@@ -83,6 +92,8 @@ class ChairBleBridge:
         self.command_frames = FrameBuffer(b"[REMOTE] ")
         self.connections = set()
         # Hand send_to_chair off to main loop; don't deinit/reinit UART in BLE IRQ.
+        self.pending_write = None
+        self.dropped_ble_writes = 0
         self.pending_command = None
         self.pending_ota = None
         self.ota_active = False
@@ -90,10 +101,14 @@ class ChairBleBridge:
         self.ota_size = 0
         self.ota_received = 0
         self.ota_file = None
+        self.adv_payload = advertising_payload(DEVICE_NAME)
+        self.need_advertise = False
+        self.last_advertise_ms = time.ticks_ms()
+        self.last_gc_ms = time.ticks_ms()
 
         self.ble = bluetooth.BLE()
         self.ble.active(True)
-        self.ble.config(mtu=BLE_MTU)
+        self.ble.config(mtu=BLE_MTU, rxbuf=BLE_RX_BUFFER_LEN)
         self.ble.irq(self._on_ble_irq)
 
         data_char = (CHAR_DATA_UUID, _FLAG_READ | _FLAG_NOTIFY)
@@ -108,7 +123,9 @@ class ChairBleBridge:
         self._advertise()
 
         print("BLE ready: {}".format(DEVICE_NAME))
+        print("Reset cause: {}".format(reset_cause()))
         print("MicroPython firmware is experimental and uses no BLE passkey")
+        self.wdt = WDT(timeout=WDT_TIMEOUT_MS)
 
     def _open_command_rx(self):
         # Omit tx= so UART(1) leaves TXD_CMD high-Z; mirrors src/main.cpp's tx=-1
@@ -124,8 +141,13 @@ class ChairBleBridge:
         )
 
     def _advertise(self):
-        payload = advertising_payload(DEVICE_NAME)
-        self.ble.gap_advertise(100_000, adv_data=payload)
+        try:
+            self.ble.gap_advertise(BLE_ADVERTISE_INTERVAL_US, adv_data=self.adv_payload)
+            self.last_advertise_ms = time.ticks_ms()
+            self.need_advertise = False
+        except OSError as exc:
+            print("BLE advertise failed: {}".format(exc))
+            self.need_advertise = True
 
     def _on_ble_irq(self, event, data):
         if event == _IRQ_CENTRAL_CONNECT:
@@ -136,11 +158,14 @@ class ChairBleBridge:
             conn_handle, _, _ = data
             self.connections.discard(conn_handle)
             print("Client disconnected")
-            self._advertise()
+            self.need_advertise = True
         elif event == _IRQ_GATTS_WRITE:
             conn_handle, value_handle = data
             if value_handle == self.cmd_handle:
-                self._handle_ble_write(self.ble.gatts_read(value_handle))
+                if self.pending_write is None:
+                    self.pending_write = bytes(self.ble.gatts_read(value_handle))
+                else:
+                    self.dropped_ble_writes += 1
 
     def _handle_ble_write(self, value):
         action, payload = parse_ble_write(value)
@@ -170,6 +195,8 @@ class ChairBleBridge:
             except OSError:
                 self.connections.discard(conn_handle)
         print(message)
+        if not self.connections:
+            self.need_advertise = True
 
     def send_to_chair(self, command):
         self.command_uart.deinit()
@@ -222,6 +249,18 @@ class ChairBleBridge:
         self.pending_command = None
         print("BLE received: {}".format(command))
         self.send_to_chair(command)
+
+    def _process_pending_write(self):
+        value = self.pending_write
+        if value is None:
+            return
+        self.pending_write = None
+        self._handle_ble_write(value)
+
+        dropped = self.dropped_ble_writes
+        if dropped:
+            self.dropped_ble_writes = 0
+            self.ble_send("[ERROR] Dropped {} BLE write(s)".format(dropped))
 
     def _process_pending_ota(self):
         item = self.pending_ota
@@ -309,11 +348,26 @@ class ChairBleBridge:
         print("OTA done: {}".format(self.ota_filename))
         self.ble_send("[CHAIR] OTA DONE {}".format(self.ota_filename))
 
+    def _process_ble_health(self):
+        now = time.ticks_ms()
+        if not self.connections and (
+            self.need_advertise
+            or time.ticks_diff(now, self.last_advertise_ms) >= BLE_ADVERTISE_RETRY_MS
+        ):
+            self._advertise()
+
+        if time.ticks_diff(now, self.last_gc_ms) >= GC_INTERVAL_MS:
+            gc.collect()
+            self.last_gc_ms = now
+
     def run(self):
         while True:
             self.poll_uart()
+            self._process_pending_write()
             self._process_pending()
             self._process_pending_ota()
+            self._process_ble_health()
+            self.wdt.feed()
             time.sleep_ms(2)
 
 

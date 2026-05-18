@@ -219,7 +219,7 @@ private struct DiffRawLine: View {
     private var byteHeader: String {
         let bytes = ChairDecode.bytes(from: value)
         return bytes.indices.map { idx in
-            "B\(idx + 1)".centered(in: mode.columnWidth)
+            "B\(idx)".centered(in: mode.columnWidth)
         }.joined(separator: " ")
     }
 

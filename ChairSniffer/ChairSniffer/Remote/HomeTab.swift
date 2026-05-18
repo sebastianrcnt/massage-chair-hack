@@ -6,8 +6,10 @@ struct HomeTab: View {
 
     private let power = ControlItem(code: "0303", label: "전원",     icon: "power",     prominence: .primary, iconOnly: true)
     private let timer = ControlItem(code: "032D", label: "타이머", emphasizesState: true)
-    private let backRecline = ControlItem(code: "0304", label: "등", icon: "chevron.down", repeatsProgressHaptics: true)
-    private let legLower = ControlItem(code: "0301", label: "발판", icon: "chevron.down", repeatsProgressHaptics: true)
+    private let backRaise = ControlItem(code: "0302", label: "등", icon: "chevron.up")
+    private let backRecline = ControlItem(code: "0304", label: "등", icon: "chevron.down")
+    private let legRaise = ControlItem(code: "0307", label: "다리", icon: "chevron.up")
+    private let legLower = ControlItem(code: "0301", label: "다리", icon: "chevron.down")
     private let air = ControlItem(code: "0375", label: "에어", icon: "pillow.fill")
     private let airLevel = ControlItem(code: "0315", label: "강도", emphasizesState: true)
     private let heater = ControlItem(code: "0330", label: "온열", icon: "heat.waves")
@@ -41,6 +43,9 @@ struct HomeTab: View {
         .padding(.top, 8)
         .padding(.bottom, 14)
         .background(Color(.systemGroupedBackground))
+        .onDisappear {
+            ble.releaseLatchedPosture()
+        }
     }
 
     private var sessionRow: some View {
@@ -53,9 +58,11 @@ struct HomeTab: View {
     }
 
     private var postureRow: some View {
-        HStack(spacing: 12) {
-            button(backRecline, minHeight: 84)
-            button(legLower, minHeight: 84)
+        HStack(spacing: 8) {
+            latchedPostureButton(backRaise)
+            latchedPostureButton(backRecline)
+            latchedPostureButton(legRaise)
+            latchedPostureButton(legLower)
         }
     }
 
@@ -103,6 +110,36 @@ struct HomeTab: View {
 
     private var timerExtendGlass: Glass {
         ble.autoTimerExtendEnabled ? .regular.tint(.chairActive).interactive() : .regular.interactive()
+    }
+
+    private func latchedPostureButton(_ item: ControlItem) -> some View {
+        let isActive = ble.latchedPostureCommand == item.code
+        return Button {
+            ChairHaptics.heavy()
+            ble.toggleLatchedPosture(command: item.code)
+        } label: {
+            VStack(spacing: 4) {
+                if isActive {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(.chairControlTextOnTint)
+                } else if let icon = item.icon {
+                    Image(systemName: icon)
+                        .font(.title3.weight(.semibold))
+                }
+                Text(item.label)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .foregroundStyle(isActive ? Color.chairControlTextOnTint : Color.primary)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
+        }
+        .glassEffect(isActive ? .regular.tint(.chairActive).interactive() : .regular.interactive(), in: .rect(cornerRadius: 18))
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .accessibilityLabel("\(item.label) \(item.icon == "chevron.up" ? "up" : "down")")
     }
 
     private func button(_ item: ControlItem, minHeight: CGFloat) -> some View {

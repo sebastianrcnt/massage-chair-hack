@@ -90,6 +90,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     @Published var droppedRawLogCount = 0
     @Published var currentAutoMode: String?
     @Published var isWidthAutoCycling = false
+    @Published var latchedPostureCommand: String?
     /// The peripheral currently being connected to (spinner state) or already connected (idle/active).
     /// Cleared on failure, intentional disconnect, or unintentional drop.
     @Published var activeDeviceId: UUID?
@@ -156,6 +157,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private var autoReconnectTargetId: UUID?
     private var recentWidthSamples: [(value: String, date: Date)] = []
     private var autoTimerExtendTimer: Timer?
+    private var latchedPostureReleaseWorkItem: DispatchWorkItem?
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -287,6 +289,34 @@ final class ChairBLEManager: NSObject, ObservableObject {
         autoTimerExtendEnabled.toggle()
     }
 
+    func toggleLatchedPosture(command: String) {
+        let normalized = command.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard isConnected, ChairDecode.isFourDigitHex(normalized) else { return }
+
+        if latchedPostureCommand == normalized {
+            releaseLatchedPosture()
+            return
+        }
+
+        if latchedPostureCommand != nil {
+            releaseLatchedPosture()
+        }
+
+        latchedPostureCommand = normalized
+        send(command: normalized)
+        scheduleLatchedPostureRelease()
+    }
+
+    func releaseLatchedPosture() {
+        guard latchedPostureCommand != nil else { return }
+        latchedPostureReleaseWorkItem?.cancel()
+        latchedPostureReleaseWorkItem = nil
+        latchedPostureCommand = nil
+        if isConnected {
+            send(command: "0355")
+        }
+    }
+
     private var rememberedDeviceId: UUID? {
         guard let raw = UserDefaults.standard.string(forKey: DefaultsKey.lastDeviceId) else { return nil }
         return UUID(uuidString: raw)
@@ -332,6 +362,15 @@ final class ChairBLEManager: NSObject, ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.attemptAutoReconnect(reason: reason)
         }
+    }
+
+    private func scheduleLatchedPostureRelease() {
+        latchedPostureReleaseWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.releaseLatchedPosture()
+        }
+        latchedPostureReleaseWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 12, execute: workItem)
     }
 
     private func sendTimerClick() {
@@ -391,6 +430,9 @@ final class ChairBLEManager: NSObject, ObservableObject {
         notifyCount = 0
         sentCount = 0
         currentAutoMode = nil
+        latchedPostureReleaseWorkItem?.cancel()
+        latchedPostureReleaseWorkItem = nil
+        latchedPostureCommand = nil
         hasReceivedFirstNotification = false
         manualBitLastZero.removeAll()
         manualBitLastOne.removeAll()

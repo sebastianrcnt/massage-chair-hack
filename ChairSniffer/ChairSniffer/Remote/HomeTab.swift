@@ -6,8 +6,8 @@ struct HomeTab: View {
 
     private let power = ControlItem(code: "0303", label: "전원",     icon: "power",     prominence: .primary, iconOnly: true)
     private let timer = ControlItem(code: "032D", label: "타이머", emphasizesState: true)
-    private let backRaise = ControlItem(code: "0302", label: "등", icon: "chevron.up")
-    private let backRecline = ControlItem(code: "0304", label: "등", icon: "chevron.down")
+    private let backRaise = ControlItem(code: "0302", label: "세우기")
+    private let backRecline = ControlItem(code: "0304", label: "눕히기")
     private let legRaise = ControlItem(code: "0307", label: "다리", icon: "chevron.up")
     private let legLower = ControlItem(code: "0301", label: "다리", icon: "chevron.down")
     private let air = ControlItem(code: "0375", label: "에어", icon: "pillow.fill")
@@ -139,7 +139,7 @@ struct HomeTab: View {
         }
         .glassEffect(isActive ? .regular.tint(.chairActive).interactive() : .regular.interactive(), in: .rect(cornerRadius: 18))
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .accessibilityLabel("\(item.label) \(item.icon == "chevron.up" ? "up" : "down")")
+        .accessibilityLabel(item.label)
     }
 
     private func button(_ item: ControlItem, minHeight: CGFloat) -> some View {

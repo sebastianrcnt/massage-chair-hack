@@ -31,6 +31,7 @@ This document tracks the current reverse-engineered status map. Byte positions a
 | Air mode cycle | `0375` | `0355` | Cycles through air massage modes |
 | Air strength | `0315` | `0355` | No ACK observed |
 | Foot roller | `0331` | `0339` | |
+| Massage area | `0314` | `0355` | Cycles short-status `B4[b2:b1]`: point/local/full |
 | Massage position up | `032C` | `0355` | ACK `1103` (beep); chair sends `[Y] 1100` after release |
 | Massage position down | `032F` | `0355` | ACK `1103` (beep); chair sends `[Y] 1100` after release |
 | Position reset | `0384` | `0355` | ACK `1103` (beep); no `1100` |

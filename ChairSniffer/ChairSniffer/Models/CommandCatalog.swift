@@ -36,6 +36,7 @@ enum CommandCatalog {
 
         // Massage
         "0331": .init(name: "Foot roller",      role: .press,   note: nil),
+        "0314": .init(name: "Massage area",     role: .press,   note: "cycle point/local/full"),
         "032C": .init(name: "Position up",      role: .press,   note: nil),
         "032F": .init(name: "Position down",    role: .press,   note: nil),
         "0384": .init(name: "Position reset",   role: .press,   note: nil),

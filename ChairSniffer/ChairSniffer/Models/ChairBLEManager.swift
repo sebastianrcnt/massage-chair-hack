@@ -107,6 +107,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     /// Most-recently observed blinking manual technique (e.g. "롤링 두드림"), or nil when none active.
     @Published var manualTechnique: String?
     @Published var stableAirStrength: String?
+    @Published var stableArea: String?
     @Published var activeAirAreas: [ChairAirArea] = []
     @Published var rollerPosition: ChairRollerPosition?
 
@@ -196,7 +197,11 @@ final class ChairBLEManager: NSObject, ObservableObject {
     }
 
     var decodedStatus: ChairDecodedStatus {
-        ChairDecode.decode(short: latestShort, long: latestLong)
+        var status = ChairDecode.decode(short: latestShort, long: latestLong)
+        if status.area == "-", let stableArea {
+            status.area = stableArea
+        }
+        return status
     }
 
     var rawTerminalText: String {
@@ -375,6 +380,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
         isManualMode = false
         manualTechnique = nil
         stableAirStrength = nil
+        stableArea = nil
         recentWidthSamples.removeAll()
         isWidthAutoCycling = false
         airAreaLastHigh.removeAll()
@@ -446,6 +452,13 @@ final class ChairBLEManager: NSObject, ObservableObject {
         let strength = ChairDecode.decode(short: "", long: longHex).airStrength
         if ["1", "3", "5"].contains(strength) {
             stableAirStrength = strength
+        }
+    }
+
+    private func updateStableArea(from shortHex: String) {
+        let area = ChairDecode.decode(short: shortHex, long: "").area
+        if area != "-" {
+            stableArea = area
         }
     }
 
@@ -545,6 +558,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
                 updateRollerPositionState(from: payload)
             } else if payload.count > 5 {
                 latestShort = payload
+                updateStableArea(from: payload)
             } else {
                 if payload == "1104" {
                     ChairHaptics.doubleHeavy()

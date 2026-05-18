@@ -64,6 +64,7 @@ _FLAG_NOTIFY = const(0x0010)
 
 # Long enough for the largest [ERR ...] string and a full MAX_FRAME_LEN frame.
 GATT_BUFFER_LEN = const(128)
+GATT_COMMAND_BUFFER_LEN = const(256)
 BLE_MTU = const(256)
 BLE_RX_BUFFER_LEN = const(512)
 BLE_ADVERTISE_INTERVAL_US = const(100_000)
@@ -119,6 +120,7 @@ class ChairBleBridge:
         )
         # Default value buffer is 20B; bump so long error strings survive read_gatt_char.
         self.ble.gatts_set_buffer(self.data_handle, GATT_BUFFER_LEN)
+        self.ble.gatts_set_buffer(self.cmd_handle, GATT_COMMAND_BUFFER_LEN)
         self.ble.gatts_write(self.data_handle, b"")
         self._advertise()
 

@@ -5,6 +5,7 @@ MAX_FRAME_LEN = 96
 
 ADV_TYPE_FLAGS = 0x01
 ADV_TYPE_NAME = 0x09
+ADV_TYPE_UUID128_COMPLETE = 0x07
 
 BLE_COMMAND_IGNORE = "ignore"
 BLE_COMMAND_ERROR = "error"
@@ -22,6 +23,26 @@ def advertising_payload(name):
 
     append(ADV_TYPE_FLAGS, b"\x06")
     append(ADV_TYPE_NAME, name.encode())
+    return payload
+
+
+def advertising_payload_with_service(uuid):
+    payload = bytearray()
+
+    def append(adv_type, value):
+        payload.extend(struct.pack("BB", len(value) + 1, adv_type))
+        payload.extend(value)
+
+    append(ADV_TYPE_FLAGS, b"\x06")
+    append(ADV_TYPE_UUID128_COMPLETE, bytes(reversed(bytes.fromhex(uuid.replace("-", "")))))
+    return payload
+
+
+def scan_response_payload(name):
+    payload = bytearray()
+    value = name.encode()
+    payload.extend(struct.pack("BB", len(value) + 1, ADV_TYPE_NAME))
+    payload.extend(value)
     return payload
 
 
@@ -70,7 +91,7 @@ class FrameBuffer:
         if value == ord("\r"):
             self.dropping = False
             messages = self.flush()
-            self.line.clear()
+            self.line = bytearray()
             return messages
 
         if self.dropping:
@@ -80,7 +101,7 @@ class FrameBuffer:
             self.line.append(value)
             return []
 
-        self.line.clear()
+        self.line = bytearray()
         self.dropping = True
         return [FRAME_OVERLONG_ERROR]
 

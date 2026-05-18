@@ -448,6 +448,7 @@ class ChairMonitor(App):
         self.paused_count = 0
         self.status_row_height = 12
         self.is_resizing_logs = False
+        self.cmd_log_entries: list[tuple[str, str, str]] = []
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -515,6 +516,10 @@ class ChairMonitor(App):
         self.display_mode = modes[(modes.index(self.display_mode) + 1) % len(modes)]
         self.set_display_mode_label()
         self.refresh_status_format()
+        cmd_log = self.query_one("#cmd-log", RichLog)
+        cmd_log.clear()
+        for kind, ts, data in self.cmd_log_entries:
+            cmd_log.write(self._make_cmd_entry(kind, ts, data))
         raw_log = self.query_one("#raw-log", RichLog)
         mode = {
             "bin": "binary",
@@ -545,6 +550,32 @@ class ChairMonitor(App):
         style = "bold yellow" if self.paused else "bold green"
         raw_log.write(Text(message, style=style))
 
+    def _make_cmd_entry(self, kind: str, now: str, data: str) -> Text:
+        entry = Text()
+        entry.append(f"{now}  ", style="dim")
+        if kind == "ack":
+            entry.append("← ", style="yellow")
+            entry.append("[Y] ", style="bold yellow")
+            entry.append(format_bytes(data, self.display_mode), style="bold white")
+        elif kind == "write":
+            entry.append("→ ", style="green")
+            entry.append("[W] ", style="bold green")
+            entry.append(format_bytes(data, self.display_mode), style="bold white")
+        elif kind == "sent":
+            entry.append("⚡ ", style="magenta")
+            entry.append("[SENT] ", style="bold magenta")
+            entry.append(format_bytes(data, self.display_mode), style="bold white")
+        else:
+            style = "bold green" if data.startswith("[PIN]") else "bold red"
+            entry.append(data, style=style)
+        return entry
+
+    def _append_cmd_entry(self, kind: str, now: str, data: str) -> None:
+        self.cmd_log_entries.append((kind, now, data))
+        if len(self.cmd_log_entries) > 500:
+            self.cmd_log_entries = self.cmd_log_entries[-500:]
+        self.query_one("#cmd-log", RichLog).write(self._make_cmd_entry(kind, now, data))
+
     def debug_log(self, message: str) -> None:
         if not self.debug_enabled:
             return
@@ -559,7 +590,6 @@ class ChairMonitor(App):
             return
 
         raw_log = self.query_one("#raw-log", RichLog)
-        cmd_log = self.query_one("#cmd-log", RichLog)
         status = self.query_one("#status-box", StatusPanel)
 
         now = datetime.now().strftime("%H:%M:%S.%f")[:-3]
@@ -574,15 +604,7 @@ class ChairMonitor(App):
 
             if data_len <= 5:
                 # Command ACK
-                entry = Text()
-                entry.append(f"{now}  ", style="dim")
-                entry.append("← ", style="yellow")
-                entry.append("[Y] ", style="bold yellow")
-                entry.append(
-                    format_bytes(data, self.display_mode),
-                    style="bold white",
-                )
-                cmd_log.write(entry)
+                self._append_cmd_entry("ack", now, data)
 
             elif data_len <= 12:
                 status.update_short(data)
@@ -593,35 +615,13 @@ class ChairMonitor(App):
                 self.query_one("#decoded-box", DecodedPanel).update_long(data)
 
         elif text.startswith("[W] "):
-            data = text[4:]
-            entry = Text()
-            entry.append(f"{now}  ", style="dim")
-            entry.append("→ ", style="green")
-            entry.append("[W] ", style="bold green")
-            entry.append(
-                format_bytes(data, self.display_mode),
-                style="bold white",
-            )
-            cmd_log.write(entry)
+            self._append_cmd_entry("write", now, text[4:])
 
         elif text.startswith("[SENT] "):
-            data = text[7:]
-            entry = Text()
-            entry.append(f"{now}  ", style="dim")
-            entry.append("⚡ ", style="magenta")
-            entry.append("[SENT] ", style="bold magenta")
-            entry.append(
-                format_bytes(data, self.display_mode),
-                style="bold white",
-            )
-            cmd_log.write(entry)
+            self._append_cmd_entry("sent", now, text[7:])
 
         elif text.startswith("[PIN] ") or text.startswith("[ERR] "):
-            style = "bold green" if text.startswith("[PIN]") else "bold red"
-            entry = Text()
-            entry.append(f"{now}  ", style="dim")
-            entry.append(text, style=style)
-            cmd_log.write(entry)
+            self._append_cmd_entry("pin_err", now, text)
 
     def notification_handler(self, sender, data: bytearray) -> None:
         """Called by bleak when ESP32 sends a notification."""

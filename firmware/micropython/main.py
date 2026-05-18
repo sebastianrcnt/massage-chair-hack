@@ -35,8 +35,9 @@ LED_PIN = const(2)
 
 BAUD_RATE = const(9600)
 
-DEVICE_NAME = "ChairSniffer"
-SERVICE_UUID = bluetooth.UUID("12345678-1234-1234-1234-123456789abc")
+DEVICE_NAME = "ChairSniffer-AFEF"
+SERVICE_UUID_TEXT = "12345678-1234-1234-1234-123456789abc"
+SERVICE_UUID = bluetooth.UUID(SERVICE_UUID_TEXT)
 CHAR_DATA_UUID = bluetooth.UUID("12345678-1234-1234-1234-123456789abd")
 CHAR_CMD_UUID = bluetooth.UUID("12345678-1234-1234-1234-123456789abe")
 
@@ -47,6 +48,10 @@ _IRQ_GATTS_WRITE = const(3)
 _FLAG_READ = const(0x0002)
 _FLAG_WRITE = const(0x0008)
 _FLAG_NOTIFY = const(0x0010)
+
+# Long enough for the largest [ERR ...] string and a full MAX_FRAME_LEN frame.
+GATT_BUFFER_LEN = const(128)
+BLE_MTU = const(256)
 
 
 class ChairBleBridge:
@@ -66,9 +71,12 @@ class ChairBleBridge:
         self.status_frames = FrameBuffer(b"[Y] ")
         self.command_frames = FrameBuffer(b"[W] ")
         self.connections = set()
+        # Hand send_to_chair off to main loop; don't deinit/reinit UART in BLE IRQ.
+        self.pending_command = None
 
         self.ble = bluetooth.BLE()
         self.ble.active(True)
+        self.ble.config(mtu=BLE_MTU)
         self.ble.irq(self._on_ble_irq)
 
         data_char = (CHAR_DATA_UUID, _FLAG_READ | _FLAG_NOTIFY)
@@ -77,6 +85,8 @@ class ChairBleBridge:
         ((self.data_handle, self.cmd_handle),) = self.ble.gatts_register_services(
             (service,)
         )
+        # Default value buffer is 20B; bump so long error strings survive read_gatt_char.
+        self.ble.gatts_set_buffer(self.data_handle, GATT_BUFFER_LEN)
         self.ble.gatts_write(self.data_handle, b"")
         self._advertise()
 
@@ -84,6 +94,8 @@ class ChairBleBridge:
         print("MicroPython firmware is experimental and uses no BLE passkey")
 
     def _open_command_rx(self):
+        # Omit tx= so UART(1) leaves TXD_CMD high-Z; mirrors src/main.cpp's tx=-1
+        # and lets the real remote drive the shared white line.
         Pin(TXD_CMD, Pin.IN)
         return UART(
             1,
@@ -121,19 +133,26 @@ class ChairBleBridge:
             self.ble_send(payload)
             return
         if action == BLE_COMMAND_SEND:
-            print("BLE received: {}".format(payload))
-            self.send_to_chair(payload)
+            # Drop instead of queueing so a write flood can't unbound IRQ work.
+            if self.pending_command is None:
+                self.pending_command = payload
+            else:
+                self.ble_send("[ERR] Busy; previous command pending")
 
     def ble_send(self, message):
         data = message.encode()
         self.ble.gatts_write(self.data_handle, data)
-        for conn_handle in self.connections:
-            self.ble.gatts_notify(conn_handle, self.data_handle, data)
+        for conn_handle in list(self.connections):
+            try:
+                self.ble.gatts_notify(conn_handle, self.data_handle, data)
+            except OSError:
+                self.connections.discard(conn_handle)
         print(message)
 
     def send_to_chair(self, command):
         self.command_uart.deinit()
-        tx_pin = Pin(TXD_CMD, Pin.OUT)
+        # Pre-drive high (UART idle) before UART takes over to avoid a glitch.
+        tx_pin = Pin(TXD_CMD, Pin.OUT, value=1)
         self.command_uart = UART(
             1,
             baudrate=BAUD_RATE,
@@ -174,9 +193,18 @@ class ChairBleBridge:
             value = self.command_uart.read(1)[0]
             self._emit_frame_messages(self.command_frames.append(value))
 
+    def _process_pending(self):
+        command = self.pending_command
+        if command is None:
+            return
+        self.pending_command = None
+        print("BLE received: {}".format(command))
+        self.send_to_chair(command)
+
     def run(self):
         while True:
             self.poll_uart()
+            self._process_pending()
             time.sleep_ms(2)
 
 

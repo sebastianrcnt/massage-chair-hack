@@ -12,6 +12,45 @@ This document tracks the current reverse-engineered status map. Byte positions a
 | `[W]` | Remote command line, white wire | Remote-to-chair command sniffing |
 | `[SENT]` | BLE monitor app | Command sent by this tool to the chair |
 
+## Remote Commands (`[W]`)
+
+| Button | Press | Release | Notes |
+| --- | --- | --- | --- |
+| Power | `0303` | `0355` | |
+| Timer | `032D` | `0355` | Cycles +5 min steps; max 30 min, then wraps to 5 min |
+| Pause / Resume | `0322` | `0355` | |
+| Speed | `0327` | `0336` | 3-step cycle; manual mode only — no ACK outside manual mode |
+| Manual mode | `0363` | `0339` | |
+| Back recline | `0304` | `0355` | Hold to move; stops at end of travel |
+| Back raise | `0302` | `0355` | Hold to move; stops at end of travel |
+| Leg lower | `0301` | `0355` | Hold to move; stops at end of travel |
+| Leg raise | `0307` | `0355` | Hold to move; stops at end of travel |
+| Air mode cycle | `0375` | `0355` | Cycles through air massage modes |
+| Air strength | `0315` | `0355` | No ACK observed |
+| Foot roller | `0331` | `0339` | |
+| Massage position up | `032C` | `0355` | ACK `1103` (beep); chair sends `[Y] 1100` after release |
+| Massage position down | `032F` | `0355` | ACK `1103` (beep); chair sends `[Y] 1100` after release |
+| Position reset | `0384` | `0355` | ACK `1103` (beep); no `1100` |
+| Zero gravity | `0306` | `0355` | ACK `1103` (beep) |
+| Auto: Charging (충전) | `031F` | `0355` | ACK `1103`; resets timer to 15 min |
+| Auto: Digestion (소화) | `0391` | `0355` | ACK `1103`; resets timer to 15 min |
+| Auto: Classic (클래식) | `0305` | `0355` | ACK `1103`; resets timer to 15 min |
+| Auto: Sleep (숙면) | `0321` | `0355` | ACK `1103`; resets timer to 15 min |
+| Auto: Stretching (스트레칭) | `031E` | `0336` | ACK `1103`; resets timer to 15 min; unique release code |
+| Auto: Healing (힐링) | `0320` | `0355` | ACK `1103`; resets timer to 15 min |
+| Width cycle | `0364` | `0355` | No ACK observed |
+| Heater toggle | `0330` | `0355` | ACK `1103` (beep) |
+
+Release `0355` appears to be shared across multiple buttons, but speed and manual mode have their own release codes.
+
+## Chair ACK (`[Y]`)
+
+| Code | Hypothesis | Confidence |
+| --- | --- | --- |
+| `1103` | Single beep on remote | Tentative — observed on most button presses |
+| `1104` | Double beep on remote — cycle complete | Sent when any cycle button wraps back to first step (confirmed: speed, air strength; likely: timer, others) |
+| `1100` | Unknown — observed after massage position up/down release only | Tentative — not seen after position reset; may signal head-unit reached target position |
+
 ## Frame Classification
 
 The monitor currently classifies `[Y]` payloads by hex string length.

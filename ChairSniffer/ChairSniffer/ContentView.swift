@@ -10,6 +10,7 @@ struct ContentView: View {
             VStack(spacing: 0) {
                 if !ble.isConnected {
                     ConnectionBanner(ble: ble) {
+                        ble.scan()
                         showDevicePicker = true
                     }
                 }

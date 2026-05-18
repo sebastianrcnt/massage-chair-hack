@@ -33,7 +33,12 @@ struct DevicePickerSheet: View {
                     }
                 }
             }
-            .onAppear { ble.refreshDeviceList() }
+            .onAppear {
+                if ble.isBluetoothReady && !ble.isConnected && !ble.isScanning {
+                    ble.scan()
+                }
+                ble.refreshDeviceList()
+            }
             .onReceive(refreshTimer) { _ in
                 if autoRefresh { ble.refreshDeviceList() }
             }

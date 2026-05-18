@@ -245,7 +245,21 @@ def generate_commands_md(spec: dict[str, Any]) -> str:
 
 def generate_status_map_md(spec: dict[str, Any], key: str, title: str) -> str:
     rows = [[row["range"], row["name"], row["rule"], row["confidence"]] for row in spec["status_maps"][key]]
-    return HEADER_MD + f"# {title}\n\n" + md_table(["Range", "Name", "Rule", "Confidence"], rows)
+    content = HEADER_MD + f"# {title}\n\n" + md_table(["Range", "Name", "Rule", "Confidence"], rows)
+    if key == "short":
+        content += "\n## Auto Mode Indicator Candidates\n\n"
+        content += spec["decode"]["short"]["auto_mode_indicator"]["note"] + "\n\n"
+        mode_rows = []
+        for row in spec["decode"]["short"]["auto_mode_indicator"]["modes"]:
+            if row.get("all_indicator_bits_zero"):
+                bit = "all listed bits = 0"
+                rule = "Only when short B3[b5] reports auto/non-manual"
+            else:
+                bit = f"B{row['byte']}[b{row['bit']}]"
+                rule = f"active when bit == {row['active']}"
+            mode_rows.append([row["display"], row["label"], bit, rule])
+        content += md_table(["Display", "Label", "Bit", "Rule"], mode_rows)
+    return content
 
 
 def generate_blink_md(spec: dict[str, Any]) -> str:

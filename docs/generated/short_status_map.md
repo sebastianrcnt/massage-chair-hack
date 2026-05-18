@@ -4,11 +4,30 @@
 
 | Range | Name | Rule | Confidence |
 | --- | --- | --- | --- |
-| B0[b7:b0] | Unknown | Observed 03, 00 | Unknown |
-| B1[b7:b0] | Unknown | Observed 15, 06 | Unknown |
+| B0[b7:b3] | Unknown | Not mapped | Unknown |
+| B0[b2] | Auto mode indicator: A4 숙면 | Tentative; 1 when displayed auto mode is A4 / 숙면 | Tentative |
+| B0[b1] | Auto mode indicator: A3 스트레칭 | Tentative; 1 when displayed auto mode is A3 / 스트레칭 | Tentative |
+| B0[b0] | Auto mode indicator: A2 힐링 | Tentative; 1 when displayed auto mode is A2 / 힐링 | Tentative |
+| B1[b7] | Auto mode indicator: A1 충전 | Tentative; 1 when displayed auto mode is A1 / 충전 | Tentative |
+| B1[b6:b4] | Unknown | Not mapped | Unknown |
+| B1[b3] | Auto mode indicator: A5 클래식 | Tentative; 1 when displayed auto mode is A5 / 클래식 | Tentative |
+| B1[b2:b0] | Unknown | Not mapped. A6 / 소화 is tentatively represented by all listed auto-mode indicator bits being 0 while short B3[b5] reports auto/non-manual | Unknown |
 | B2[b7:b0] | Unknown | Observed 13, 06, 15 | Unknown |
 | B3[b7:b6] | Unknown | Not mapped | Unknown |
 | B3[b5] | Manual mode indicator | 0 -> manual mode, 1 -> auto / non-manual mode | Tentative |
 | B3[b4:b0] | Unknown | Not mapped | Unknown |
 | B4[b7:b3], B4[b0] | Unknown flags | Not mapped | Unknown |
 | B4[b2:b1] | Massage area | 00 -> point, 01 -> local, 10 -> full, 11 reserved | Tentative |
+
+## Auto Mode Indicator Candidates
+
+Tentative short-status sparse indicator, not known to be 7-segment encoded. Decode A6/소화 only when all listed indicator bits are 0 and the short manual indicator reports auto/non-manual.
+
+| Display | Label | Bit | Rule |
+| --- | --- | --- | --- |
+| A1 | 충전 | B1[b7] | active when bit == 1 |
+| A2 | 힐링 | B0[b0] | active when bit == 1 |
+| A3 | 스트레칭 | B0[b1] | active when bit == 1 |
+| A4 | 숙면 | B0[b2] | active when bit == 1 |
+| A5 | 클래식 | B1[b3] | active when bit == 1 |
+| A6 | 소화 | all listed bits = 0 | Only when short B3[b5] reports auto/non-manual |

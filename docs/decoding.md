@@ -167,6 +167,10 @@ Use the generated short-status map and masks:
 - [Short status map](generated/short_status_map.md)
 - [Known masks](generated/masks.md)
 
+The short-status map also tracks tentative auto-mode indicator candidates for
+the remote display's `A1` through `A6` labels. These are currently treated as
+sparse indicator bits, not as confirmed 7-segment encoding.
+
 ## Observed Short Samples
 
 These were observed while the remote showed a timer value, but the timer mapping

@@ -20,8 +20,8 @@
 
 | Byte | Mask | Note |
 | --- | --- | --- |
-| B0 | 0x00 | unknown |
-| B1 | 0x00 | unknown |
+| B0 | 0x07 | B0 b2:b0 tentative auto-mode indicator bits |
+| B1 | 0x88 | B1 b7/b3 tentative auto-mode indicator bits |
 | B2 | 0x00 | unknown |
 | B3 | 0x20 | B3 b5 manual indicator |
 | B4 | 0x06 | B4 b2:b1 massage area |

@@ -266,6 +266,43 @@ decode:
       bit: 5
       manual: 0
       auto: 1
+    auto_mode_indicator:
+      note: Tentative short-status sparse indicator, not known to be 7-segment encoded. Decode A6/소화 only when all listed indicator bits are 0 and the short manual indicator reports auto/non-manual.
+      modes:
+        - id: charging
+          label: 충전
+          display: A1
+          byte: 1
+          bit: 7
+          active: 1
+        - id: healing
+          label: 힐링
+          display: A2
+          byte: 0
+          bit: 0
+          active: 1
+        - id: stretching
+          label: 스트레칭
+          display: A3
+          byte: 0
+          bit: 1
+          active: 1
+        - id: sleep
+          label: 숙면
+          display: A4
+          byte: 0
+          bit: 2
+          active: 1
+        - id: classic
+          label: 클래식
+          display: A5
+          byte: 1
+          bit: 3
+          active: 1
+        - id: digestion
+          label: 소화
+          display: A6
+          all_indicator_bits_zero: true
     area:
       byte: 4
       bits: [2, 1]
@@ -379,11 +416,11 @@ known_masks:
   short_length: 5
   short:
     - byte: 0
-      mask: 0x00
-      note: unknown
+      mask: 0x07
+      note: "B0 b2:b0 tentative auto-mode indicator bits"
     - byte: 1
-      mask: 0x00
-      note: unknown
+      mask: 0x88
+      note: "B1 b7/b3 tentative auto-mode indicator bits"
     - byte: 2
       mask: 0x00
       note: unknown
@@ -545,13 +582,37 @@ status_maps:
       rule: on when (last_byte & 0x02) != 0; otherwise off
       confidence: Tentative
   short:
-    - range: B0[b7:b0]
+    - range: B0[b7:b3]
       name: Unknown
-      rule: Observed 03, 00
+      rule: Not mapped
       confidence: Unknown
-    - range: B1[b7:b0]
+    - range: B0[b2]
+      name: "Auto mode indicator: A4 숙면"
+      rule: Tentative; 1 when displayed auto mode is A4 / 숙면
+      confidence: Tentative
+    - range: B0[b1]
+      name: "Auto mode indicator: A3 스트레칭"
+      rule: Tentative; 1 when displayed auto mode is A3 / 스트레칭
+      confidence: Tentative
+    - range: B0[b0]
+      name: "Auto mode indicator: A2 힐링"
+      rule: Tentative; 1 when displayed auto mode is A2 / 힐링
+      confidence: Tentative
+    - range: B1[b7]
+      name: "Auto mode indicator: A1 충전"
+      rule: Tentative; 1 when displayed auto mode is A1 / 충전
+      confidence: Tentative
+    - range: B1[b6:b4]
       name: Unknown
-      rule: Observed 15, 06
+      rule: Not mapped
+      confidence: Unknown
+    - range: B1[b3]
+      name: "Auto mode indicator: A5 클래식"
+      rule: Tentative; 1 when displayed auto mode is A5 / 클래식
+      confidence: Tentative
+    - range: B1[b2:b0]
+      name: Unknown
+      rule: Not mapped. A6 / 소화 is tentatively represented by all listed auto-mode indicator bits being 0 while short B3[b5] reports auto/non-manual
       confidence: Unknown
     - range: B2[b7:b0]
       name: Unknown

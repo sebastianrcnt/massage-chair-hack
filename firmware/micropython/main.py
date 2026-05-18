@@ -66,7 +66,6 @@ _FLAG_NOTIFY = const(0x0010)
 GATT_BUFFER_LEN = const(128)
 GATT_COMMAND_BUFFER_LEN = const(256)
 BLE_MTU = const(256)
-BLE_RX_BUFFER_LEN = const(512)
 BLE_ADVERTISE_INTERVAL_US = const(100_000)
 BLE_ADVERTISE_RETRY_MS = const(10_000)
 GC_INTERVAL_MS = const(60_000)
@@ -109,7 +108,7 @@ class ChairBleBridge:
 
         self.ble = bluetooth.BLE()
         self.ble.active(True)
-        self.ble.config(mtu=BLE_MTU, rxbuf=BLE_RX_BUFFER_LEN)
+        self.ble.config(mtu=BLE_MTU)
         self.ble.irq(self._on_ble_irq)
 
         data_char = (CHAR_DATA_UUID, _FLAG_READ | _FLAG_NOTIFY)

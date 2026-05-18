@@ -60,6 +60,16 @@ final class ChairBLEManager: NSObject, ObservableObject {
     @Published var commandLogs: [ChairCommandEntry] = []
     @Published var systemLogs: [ChairLogEntry] = []
     @Published var droppedRawLogCount = 0
+    @Published var currentAutoMode: String?
+
+    private static let autoModeCodes: [String: String] = [
+        "031F": "충전",
+        "0391": "소화",
+        "0305": "클래식",
+        "0321": "숙면",
+        "031E": "스트레칭",
+        "0320": "힐링",
+    ]
 
     private let serviceUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abc")
     private let dataUUID = CBUUID(string: "12345678-1234-1234-1234-123456789abd")
@@ -168,6 +178,17 @@ final class ChairBLEManager: NSObject, ObservableObject {
         )
         peripheral.writeValue(Data("SEND \(normalized)".utf8), for: commandCharacteristic, type: .withResponse)
         sentCount += 1
+        updateAutoMode(forCode: normalized)
+    }
+
+    private func updateAutoMode(forCode code: String) {
+        let upper = code.uppercased()
+        if let name = Self.autoModeCodes[upper] {
+            currentAutoMode = name
+        } else if upper == "0303" || upper == "0363" {
+            // Power toggle or Manual mode clears any active auto preset.
+            currentAutoMode = nil
+        }
     }
 
     private var bluetoothStateText: String {
@@ -192,6 +213,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
     private func resetSession() {
         notifyCount = 0
         sentCount = 0
+        currentAutoMode = nil
         hasReceivedFirstNotification = false
     }
 
@@ -263,6 +285,7 @@ final class ChairBLEManager: NSObject, ObservableObject {
         } else if text.hasPrefix("[REMOTE] ") {
             let payload = String(text.dropFirst(9))
             let info = CommandCatalog.describe(payload)
+            updateAutoMode(forCode: payload)
             appendCommand(
                 .remoteToChair,
                 code: payload,

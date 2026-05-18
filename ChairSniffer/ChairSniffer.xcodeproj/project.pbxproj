@@ -11,6 +11,7 @@
 		17A263C34DA235956FE43729 /* SystemLogScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC13D873E01BB6861F86A4C /* SystemLogScreen.swift */; };
 		2C31D721A48E4EEAE6E9F2EA /* CustomHexScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B3D6992BCA340221544FDBE /* CustomHexScreen.swift */; };
 		2D83FA21755FED36D64C5B65 /* ViewStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2666168918D88AB8B959CD /* ViewStyles.swift */; };
+		3125B4F896474DE387603882 /* HeroStatusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3520CFADC1FE28BFC27CACF /* HeroStatusCard.swift */; };
 		3EA5FB5EEC56114C975B1EA6 /* CommandLogScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3CA71DAD33CA1D15DF627CE /* CommandLogScreen.swift */; };
 		4101E11866E8050790FE462B /* DevicePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FC9649DEC8E0FFAA7FFA1CB /* DevicePickerSheet.swift */; };
 		489A29EB8BE2CB784F5B206E /* ConnectionBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF4F4D9315570CC41356DCB /* ConnectionBanner.swift */; };
@@ -44,6 +45,7 @@
 		A38804FAAC956A76B39DADCF /* ChairSniffer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ChairSniffer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B1E6EA5B3F5FA09DD4DCAF5C /* ConnectionPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionPanel.swift; sourceTree = "<group>"; };
 		BDEDEF5052F3D8E00D2AD16C /* RemoteCommandPad.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCommandPad.swift; sourceTree = "<group>"; };
+		C3520CFADC1FE28BFC27CACF /* HeroStatusCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroStatusCard.swift; sourceTree = "<group>"; };
 		CB2666168918D88AB8B959CD /* ViewStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewStyles.swift; sourceTree = "<group>"; };
 		CC904DEEDADDB16EDF688436 /* ChairDecode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChairDecode.swift; sourceTree = "<group>"; };
 		CED4EBD8C059C7C8899B468F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -109,6 +111,7 @@
 		E294ECBE04175A18AA4286C2 /* Remote */ = {
 			isa = PBXGroup;
 			children = (
+				C3520CFADC1FE28BFC27CACF /* HeroStatusCard.swift */,
 				BDEDEF5052F3D8E00D2AD16C /* RemoteCommandPad.swift */,
 				43FC23809D1F075C31649CB3 /* RemoteView.swift */,
 			);
@@ -208,6 +211,7 @@
 				A046A6720042C7C1FA95945F /* DecodedStatusScreen.swift in Sources */,
 				96D830466686A32DA6577A69 /* DevToolsSheet.swift in Sources */,
 				4101E11866E8050790FE462B /* DevicePickerSheet.swift in Sources */,
+				3125B4F896474DE387603882 /* HeroStatusCard.swift in Sources */,
 				AB20F5FFE5CFFB82E0593FB5 /* RawFeedScreen.swift in Sources */,
 				BB058506B32F5801CEA6AA96 /* RemoteCommandPad.swift in Sources */,
 				B0DF2910BAA3649747DCE364 /* RemoteView.swift in Sources */,

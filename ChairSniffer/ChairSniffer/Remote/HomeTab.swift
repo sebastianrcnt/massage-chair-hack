@@ -26,8 +26,7 @@ struct HomeTab: View {
                 TabHeader(title: "홈", ble: ble, onStatusTap: onStatusTap)
                 GlassEffectContainer(spacing: 12) {
                     VStack(spacing: 14) {
-                        primaryRow
-                        timerRow
+                        sessionRow
                         autoModeRow
                         manualRow
                     }
@@ -40,18 +39,12 @@ struct HomeTab: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    private var primaryRow: some View {
+    private var sessionRow: some View {
         HStack(spacing: 12) {
             button(power, minHeight: 76)
             button(pause, minHeight: 76)
-        }
-    }
-
-    private var timerRow: some View {
-        HStack(spacing: 12) {
             button(timer, minHeight: 76)
             autoTimerExtendButton
-                .frame(width: 76)
         }
     }
 
